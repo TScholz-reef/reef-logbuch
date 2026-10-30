@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0A171E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Riff-Logbuch">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Riff-Logbuch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Logbuch eines Riffbeckens – Kopf mit Systemdaten, Reiterleiste, darunter gestapelte Arbeitsflächen; aktinisches Blau als einziger Akzent */
+:root{
+  --bg:#EDF2F3; --surface:#FFFFFF; --surface-2:#E2E9EB; --ink:#10262E; --muted:#566C74; --line:#CAD6DA;
+  --actinic:#4448CF; --actinic-ink:#FFFFFF; --actinic-soft:#E4E5FA; --band:rgba(68,72,207,.10);
+  --ok:#1D8556; --ok-soft:#DCF0E5; --warn:#A86C12; --warn-soft:#F6EAD3; --crit:#BD3A34; --crit-soft:#F6DCDA;
+  --font-display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --font-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A171E; --surface:#10222B; --surface-2:#172E39; --ink:#E1ECEF; --muted:#90A7AF; --line:#22404B;
+  --actinic:#9093FF; --actinic-ink:#0A0F2E; --actinic-soft:#22254D; --band:rgba(144,147,255,.14);
+  --ok:#4CC08A; --ok-soft:#14352A; --warn:#E2A548; --warn-soft:#382B13; --crit:#F0716A; --crit-soft:#3D1C1A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A171E; --surface:#10222B; --surface-2:#172E39; --ink:#E1ECEF; --muted:#90A7AF; --line:#22404B;
+  --actinic:#9093FF; --actinic-ink:#0A0F2E; --actinic-soft:#22254D; --band:rgba(144,147,255,.14);
+  --ok:#4CC08A; --ok-soft:#14352A; --warn:#E2A548; --warn-soft:#382B13; --crit:#F0716A; --crit-soft:#3D1C1A; color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px;padding-block:20px 12px}
+.brand h1{font-family:var(--font-display);font-weight:700;font-size:1.75rem;letter-spacing:-.01em;margin:0;line-height:1.1}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:.92rem}
+.status{font:inherit;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px;background:none;border:0;padding:4px 0;cursor:pointer;text-align:left}
+.status:hover #status-t{text-decoration:underline}
+.steps{padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:75ch;font-size:.92rem;margin:8px 0 0}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.status.ok .dot{background:var(--ok)} .status.warn .dot{background:var(--warn)} .status.crit .dot{background:var(--crit)}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin-bottom:16px}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border:0;background:none;color:var(--muted);font:600 .92rem var(--font-body);padding:10px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--actinic)}
+.tab:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,.card:focus-visible{outline:2px solid var(--actinic);outline-offset:2px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.ph{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px;margin-bottom:12px}
+.ph h2{font-family:var(--font-display);font-weight:600;font-size:1.15rem;margin:0;text-wrap:balance}
+.ph .sub{color:var(--muted);font-size:.85rem}
+h3{font-family:var(--font-display);font-weight:600;font-size:1rem;margin:14px 0 8px}
+.hint{color:var(--muted);font-size:.85rem;margin:8px 0 0;max-width:72ch}
+.mono,.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px 12px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f>span{font-size:.8rem;font-weight:600;color:var(--muted);letter-spacing:.01em}
+.f>span em{font-style:normal;font-weight:400}
+.f.wide{grid-column:1/-1}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0;width:100%}
+input.num{text-align:right}
+input[type=checkbox]{width:auto}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;grid-column:1/-1}
+.btn{font:600 .9rem var(--font-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:8px 14px;cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--actinic);border-color:var(--actinic);color:var(--actinic-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.small{padding:4px 9px;font-size:.8rem}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;color:var(--actinic);font:inherit;font-weight:600;cursor:pointer;padding:0}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;background:var(--surface-2);color:var(--muted)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.crit{background:var(--crit-soft);color:var(--crit)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.card{text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-width:0;position:relative;overflow:hidden}
+.card[aria-pressed="true"]{border-color:var(--actinic);box-shadow:inset 0 0 0 1px var(--actinic)}
+.card .name{font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.card .val{font-family:var(--font-mono);font-size:1.45rem;font-weight:600;line-height:1}
+.card .val small{font-family:var(--font-body);font-size:.78rem;color:var(--muted);font-weight:600;margin-left:3px}
+.card .meta{font-size:.78rem;color:var(--muted)}
+.card svg{display:block;width:100%;height:28px}
+.card .stripe{position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
+.card.st-ok .stripe{background:var(--ok)} .card.st-warn .stripe{background:var(--warn)} .card.st-crit .stripe{background:var(--crit)}
+.due{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.due-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;border-radius:8px;background:var(--surface-2);font-size:.9rem;min-width:0}
+.due-item b{font-weight:600}
+.due-item .when{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.due-item.crit{background:var(--crit-soft)} .due-item.crit .when{color:var(--crit);font-weight:700}
+.due-item.warn{background:var(--warn-soft)} .due-item.warn .when{color:var(--warn);font-weight:700}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{font:600 .8rem var(--font-body);border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:4px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--actinic-soft);border-color:var(--actinic);color:var(--ink)}
+.chart{width:100%;min-height:120px}
+.chart svg{display:block}
+.chart text{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+th{font-size:.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2);position:sticky;top:0}
+td{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+th:first-child{background:var(--surface-2);z-index:2}
+td.txt,th.txt{text-align:left;font-family:var(--font-body);white-space:normal;min-width:140px}
+tr:last-child td{border-bottom:0}
+tr.grp td{background:var(--surface-2);font-family:var(--font-body);font-weight:700;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+td .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:5px;vertical-align:middle}
+.d-ok{background:var(--ok)} .d-warn{background:var(--warn)} .d-crit{background:var(--crit)}
+td input{width:88px;padding:4px 6px;font-family:var(--font-mono);font-size:.85rem}
+td.hl{background:var(--actinic-soft);font-weight:600}
+.note{font-family:var(--font-body);font-size:.8rem;white-space:normal;text-align:left;color:var(--warn);min-width:180px}
+.note.crit{color:var(--crit)}
+.empty{color:var(--muted);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:8px;margin:0}
+.mix{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.mixcol{border:1px solid var(--line);border-radius:8px;padding:12px}
+.mixcol h3{margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+.mixrow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:.92rem}
+.mixrow:last-child{border-bottom:0}
+.mixrow .mono{font-weight:600}
+.mixrow.ro{color:var(--muted)}
+.mixrow.sum{border-top:1px solid var(--ink);border-bottom:0;font-weight:700;margin-top:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.9rem;align-items:baseline}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--font-mono);text-align:right}
+.res{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+.res div{background:var(--surface-2);border-radius:8px;padding:10px}
+.res span{display:block;font-size:.76rem;color:var(--muted);font-weight:600}
+.res b{font-family:var(--font-mono);font-size:1.1rem;font-weight:600}
+.res .big{background:var(--actinic-soft)}
+.banner{background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:.9rem}
+details>summary{cursor:pointer;font-weight:600;color:var(--actinic);margin:4px 0}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:.88rem;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.loading{color:var(--muted);padding:24px 0}
+@media (max-width:520px){.brand h1{font-size:1.45rem}.panel{padding:13px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Riff-Logbuch</h1>
+      <p id="hdr-sub">Riffbecken · Systemvolumen netto 900 l</p>
+    </div>
+    <button class="status" id="status" data-act="goto" data-id="speichern" title="Sicherung und PDF"><span class="dot"></span><span id="status-t">Lädt …</span></button>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="uebersicht">Übersicht</button>
+    <button class="tab" role="tab" data-tab="messungen">Messungen</button>
+    <button class="tab" role="tab" data-tab="icp">ICP</button>
+    <button class="tab" role="tab" data-tab="spuren">Spurenelemente</button>
+    <button class="tab" role="tab" data-tab="dosierung">KH · Ca · Mg</button>
+    <button class="tab" role="tab" data-tab="rechner">Salz &amp; Volumen</button>
+    <button class="tab" role="tab" data-tab="ziele">Zielwerte</button>
+    <button class="tab" role="tab" data-tab="speichern">Sichern &amp; PDF</button>
+  </nav>
+  <main id="main"><p class="loading">Lade dein Logbuch …</p></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ---------- Stammdaten ---------- */
+const PARAMS=[
+ {k:'kh',n:'KH',u:'°dKH',d:1,def:[7,8,9],iv:3},
+ {k:'ca',n:'Calcium',u:'mg/l',d:0,def:[400,420,450],iv:7},
+ {k:'mg',n:'Magnesium',u:'mg/l',d:0,def:[1250,1320,1420],iv:0},
+ {k:'no3',n:'Nitrat',u:'mg/l',d:1,def:[2,5,15],iv:7},
+ {k:'po4',n:'Phosphat',u:'mg/l',d:3,def:[0.02,0.05,0.1],iv:7},
+ {k:'sal',n:'Salinität',u:'‰',d:1,def:[34,35,35.5],iv:7},
+ {k:'ph',n:'pH',u:'',d:2,def:[7.9,8.2,8.4],iv:0},
+ {k:'temp',n:'Temperatur',u:'°C',d:1,def:[24.5,25.5,26.5],iv:0}
+];
+const PMAP=Object.fromEntries(PARAMS.map(p=>[p.k,p]));
+const EL=[
+ {s:'Co',n:'Cobalt',u:'µg/l',g:'S',def:[0.7,1,1.3]},
+ {s:'Ni',n:'Nickel',u:'µg/l',g:'S',def:[2.8,4,5.2]},
+ {s:'Fe',n:'Eisen',u:'µg/l',g:'S',def:[0.7,1,1.3]},
+ {s:'Mn',n:'Mangan',u:'µg/l',g:'S',def:[0.35,0.5,0.65]},
+ {s:'Cu',n:'Kupfer',u:'µg/l',g:'S',def:[2.8,4,5.2]},
+ {s:'Cr',n:'Chrom',u:'µg/l',g:'S',def:[0.7,1,1.3]},
+ {s:'Zn',n:'Zink',u:'µg/l',g:'S',def:[2.8,4,5.2]},
+ {s:'F',n:'Fluor',u:'mg/l',g:'S',def:[1.1,1.3,1.5]},
+ {s:'I',n:'Iod',u:'µg/l',g:'S',def:[50,65,80]},
+ {s:'V',n:'Vanadium',u:'µg/l',g:'S',def:[3.2,4.5,5.8]},
+ {s:'Se',n:'Selen',u:'µg/l',g:'S',def:[2.5,3.5,4.5]},
+ {s:'Mo',n:'Molybdän',u:'µg/l',g:'S',def:[8,12,20]},
+ {s:'Li',n:'Lithium',u:'µg/l',g:'S',def:[150,180,250]},
+ {s:'Ba',n:'Barium',u:'µg/l',g:'S',def:[5,15,25]},
+ {s:'Na',n:'Natrium',u:'mg/l',g:'H',def:[10000,10780,11500]},
+ {s:'Mg',n:'Magnesium',u:'mg/l',g:'H',def:[1250,1320,1420]},
+ {s:'Ca',n:'Calcium',u:'mg/l',g:'H',def:[400,420,450]},
+ {s:'K',n:'Kalium',u:'mg/l',g:'H',def:[380,400,420]},
+ {s:'Sr',n:'Strontium',u:'mg/l',g:'H',def:[6.5,8,10]},
+ {s:'B',n:'Bor',u:'mg/l',g:'H',def:[4,4.5,6]},
+ {s:'Br',n:'Brom',u:'mg/l',g:'H',def:[60,67,80]},
+ {s:'S',n:'Schwefel',u:'mg/l',g:'H',def:[850,900,980]},
+ {s:'P',n:'Phosphor',u:'µg/l',g:'N',def:[10,20,40]},
+ {s:'Si',n:'Silizium',u:'µg/l',g:'N',def:[0,100,500]},
+ {s:'Al',n:'Aluminium',u:'µg/l',g:'X',def:[0,0,10]},
+ {s:'Sn',n:'Zinn',u:'µg/l',g:'X',def:[0,0,2]},
+ {s:'Pb',n:'Blei',u:'µg/l',g:'X',def:[0,0,1]}
+];
+const EMAP=Object.fromEntries(EL.map(e=>[e.s,e]));
+const GROUPS={S:'Spurenelemente',H:'Hauptelemente',N:'Nährstoffe & Silikat',X:'Schadstoffe'};
+const DEF_SPUREN={Co:{stamm:'K',konz:450},Ni:{stamm:'K',konz:350},Fe:{stamm:'K',konz:10000},Mn:{stamm:'K',konz:100000},Cu:{stamm:'K',konz:10000},Cr:{stamm:'K',konz:10000},Zn:{stamm:'K',konz:10000},F:{stamm:'A',konz:4500},I:{stamm:'A',konz:75000},V:{stamm:'A',konz:10000},Se:{stamm:'A',konz:4500}};
+const ANION=new Set(['F','I','V','Se','Mo','B','Br']);
+/* Wirkung je 1 g in 100 l */
+const PRODUKTE={
+ kh:[{id:'nahco3',n:'Natriumhydrogencarbonat (NaHCO₃)',e:0.3338},{id:'na2co3',n:'Natriumcarbonat, wasserfrei (Na₂CO₃)',e:0.5292},{id:'eigen',n:'Eigenes Produkt (Angabe vom Etikett)'}],
+ ca:[{id:'cacl2',n:'Calciumchlorid-Dihydrat (CaCl₂·2H₂O)',e:2.726},{id:'eigen',n:'Eigenes Produkt (Angabe vom Etikett)'}],
+ mg:[{id:'mgcl2',n:'Magnesiumchlorid-Hexahydrat (MgCl₂·6H₂O)',e:1.196},{id:'mgso4',n:'Magnesiumsulfat-Heptahydrat (MgSO₄·7H₂O)',e:0.986},{id:'eigen',n:'Eigenes Produkt (Angabe vom Etikett)'}]
+};
+const MAXTAG={kh:1,ca:20,mg:100};
+
+function defCfg(){return{
+ volumen:900,
+ intervalle:Object.fromEntries(PARAMS.map(p=>[p.k,p.iv])),
+ ziele:{},
+ spuren:{mlProTag:9,tage:50,ausgleich:100,rundung:0.01,elemente:JSON.parse(JSON.stringify(DEF_SPUREN))},
+ dos:{kh:{produkt:'nahco3',gpl:'',wirkung:'',tagesdosis:'',fenster:30,korrektur:7},
+      ca:{produkt:'cacl2',gpl:'',wirkung:'',tagesdosis:'',fenster:30,korrektur:7},
+      mg:{produkt:'mgcl2',gpl:'',wirkung:'',tagesdosis:'',fenster:60,korrektur:7}},
+ salz:{gpl35:36},
+ vol:{bL:'',bT:'',bH:'',tL:'',tT:'',tH:'',abzug:10}
+}}
+
+/* ---------- Helfer ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function num(v){if(v==null)return null;if(typeof v==='number')return isFinite(v)?v:null;const s=String(v).trim().replace(/\s/g,'').replace(',','.');if(s==='')return null;const n=Number(s);return isFinite(n)?n:null}
+function fmt(v,d=1){if(v==null||!isFinite(v))return '–';return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function autoDec(v){const a=Math.abs(v);return a>=100?0:a>=10?1:a>=1?2:a>=0.1?3:4}
+function fmtA(v){return v==null||!isFinite(v)?'–':fmt(v,autoDec(v))}
+function inVal(v){return v==null||v===''?'':String(v).replace('.',',')}
+function todayS(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function dn(s){const [y,m,d]=s.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)}
+function ds(n){return new Date(n*864e5).toISOString().slice(0,10)}
+function fd(s,long){if(!s)return '–';const [y,m,d]=s.split('-');return d+'.'+m+'.'+(long?y:y.slice(2))}
+function relDays(s){const t=dn(todayS())-dn(s);return t===0?'heute':t===1?'gestern':t<0?'in '+(-t)+' Tagen':'vor '+t+' Tagen'}
+function deepMerge(a,b){if(b==null||typeof b!=='object'||Array.isArray(b))return b===undefined?a:b;const o=Array.isArray(a)?[]:{...a};for(const k of Object.keys(b)){o[k]=(a&&typeof a[k]==='object'&&a[k]!==null&&!Array.isArray(a[k])&&typeof b[k]==='object'&&b[k]!==null&&!Array.isArray(b[k]))?deepMerge(a[k],b[k]):b[k]}return o}
+const clone=o=>JSON.parse(JSON.stringify(o));
+function rng(key){const z=S.cfg.ziele[key];if(z&&z.min!=null&&z.max!=null)return z;const d=key.startsWith('p:')?PMAP[key.slice(2)].def:EMAP[key.slice(2)].def;return{min:d[0],ziel:d[1],max:d[2]}}
+function status(v,r){if(v==null||!r)return 'none';if(v>=r.min&&v<=r.max)return 'ok';let w=r.max-r.min;if(!(w>0))w=Math.abs(r.ziel||r.max||1)*0.2;return (v<r.min-0.5*w||v>r.max+0.5*w)?'crit':'warn'}
+function statusText(v,r){const s=status(v,r);if(s==='none')return '';if(s==='ok')return '<span class="pill ok">im Bereich</span>';return `<span class="pill ${s}">${v<r.min?'zu niedrig':'zu hoch'}</span>`}
+function dot(v,r){const s=status(v,r);return s==='none'||s==='ok'?'':`<span class="dot d-${s}" title="${v<r.min?'zu niedrig':'zu hoch'}"></span>`}
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2600)}
+function niceStep(raw){const p=Math.pow(10,Math.floor(Math.log10(raw)));const f=raw/p;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
+function regression(pts){if(pts.length<2)return null;const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);if(Math.max(...xs)-Math.min(...xs)<2)return null;const n=pts.length,mx=xs.reduce((a,b)=>a+b)/n,my=ys.reduce((a,b)=>a+b)/n;let sxy=0,sxx=0;for(let i=0;i<n;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)**2}return sxx?sxy/sxx:null}
+
+/* ---------- Zustand & Speicher ---------- */
+const S={canWrite:true,data:null,cfg:defCfg(),tab:'uebersicht',
+ ui:{chart:'kh',range:90,pdf:{tage:'90',stand:true,verlauf:true,messungen:true,icp:true,spuren:true},icpEl:'I',editMess:null,editIcp:null,confirm:null,mixEdit:null,spA:null,spB:null,faktor:{},conv:{typ:'sal',wert:'35',temp:'25'},adj:{ist:'',soll:'35',vol:''},mixDatum:todayS(),mixNotiz:''}};
+Object.defineProperties(S,{mess:{get:()=>S.data.messungen},icp:{get:()=>S.data.icp},mix:{get:()=>S.data.mischungen}});
+try{const t=localStorage.getItem('riff-tab');if(t)S.tab=t}catch(e){}
+const skey=x=>(x.datum||'')+' '+(x.zeit||'');
+const sorted=a=>[...a].sort((x,y)=>skey(x)<skey(y)?-1:skey(x)>skey(y)?1:0);
+const mess=()=>sorted(S.mess);
+const icps=()=>sorted(S.icp);
+const mixes=()=>[...S.mix].sort((a,b)=>a.gueltigAb<b.gueltigAb?-1:a.gueltigAb>b.gueltigAb?1:0);
+function series(k){
+ const out=mess().filter(m=>num(m[k])!=null).map(m=>({t:m.datum,v:num(m[k]),src:'Test'}));
+ if(k==='mg'||(k==='ca'&&!out.length)){const s=k==='mg'?'Mg':'Ca';icps().forEach(i=>{const v=num(i.werte?.[s]);if(v!=null)out.push({t:i.datum,v,src:'ICP'})})}
+ return out.sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);
+}
+function elSeries(s){return icps().filter(i=>num(i.werte?.[s])!=null).map(i=>({t:i.datum,v:num(i.werte[s])}))}
+
+/* ---------- Speicher: alles auf diesem Gerät ---------- */
+const LS_KEY='riff-logbuch-daten';
+function emptyData(){return{app:'riff-logbuch',format:1,messungen:[],icp:[],mischungen:[],config:null,geloescht:{},letzteSicherung:null}}
+function normalize(d){const o=emptyData();for(const k of ['messungen','icp','mischungen'])o[k]=Array.isArray(d[k])?d[k].filter(x=>x&&typeof x==='object'&&x.id):[];o.config=d.config&&typeof d.config==='object'?d.config:null;o.geloescht=d.geloescht&&typeof d.geloescht==='object'?{...d.geloescht}:{};o.letzteSicherung=typeof d.letzteSicherung==='number'?d.letzteSicherung:null;return o}
+function mergeData(a,b){const o=emptyData();o.letzteSicherung=a.letzteSicherung;o.geloescht={...a.geloescht};for(const [k,v] of Object.entries(b.geloescht||{}))o.geloescht[k]=Math.max(o.geloescht[k]||0,v);
+ for(const c of ['messungen','icp','mischungen']){const m=new Map();for(const r of [...a[c],...b[c]]){const p=m.get(r.id);if(!p||(r._t||0)>(p._t||0))m.set(r.id,r)}o[c]=[...m.values()].filter(r=>!(o.geloescht[r.id]>=(r._t||0)))}
+ const ca=a.config,cb=b.config;o.config=!ca?cb:!cb?ca:((cb._t||0)>(ca._t||0)?cb:ca);return o}
+function serial(d){return{app:'riff-logbuch',format:1,gespeichert:new Date().toISOString(),messungen:d.messungen,icp:d.icp,mischungen:d.mischungen,config:d.config,geloescht:d.geloescht,letzteSicherung:d.letzteSicherung}}
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('riff-logbuch',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function idbGet(k){try{const db=await idb();return await new Promise(res=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)})}catch(e){return null}}
+async function idbSet(k,v){try{const db=await idb();return await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>res(true);t.onerror=()=>res(false);t.onabort=()=>res(false)})}catch(e){return false}}
+async function loadData(){let a=await idbGet('daten'),b=null;try{const t=localStorage.getItem(LS_KEY);if(t)b=JSON.parse(t)}catch(e){}
+ if(a&&a.app!=='riff-logbuch')a=null;if(b&&b.app!=='riff-logbuch')b=null;const d=a&&b?((b.gespeichert||'')>(a.gespeichert||'')?b:a):(a||b);return d?normalize(d):emptyData()}
+let saveT=null,persistAsked=false;
+function persistLocal(){clearTimeout(saveT);saveT=setTimeout(writeNow,120)}
+function flush(){if(saveT){clearTimeout(saveT);saveT=null;writeNow()}}
+addEventListener('pagehide',flush);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
+async function writeNow(){saveT=null;const s=serial(S.data);let ok=false;try{localStorage.setItem(LS_KEY,JSON.stringify(s));ok=true}catch(e){}if(await idbSet('daten',s))ok=true;
+ if(!ok)toast('Speichern auf diesem Gerät fehlgeschlagen – bitte eine Sicherung exportieren');
+ if(!persistAsked&&navigator.storage?.persist){persistAsked=true;try{S.persist=await navigator.storage.persist()}catch(e){}}renderSync()}
+function applyConfig(){const c=S.data.config?clone(S.data.config):{};delete c._t;S.cfg=deepMerge(defCfg(),c)}
+function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,10)}
+function changed(){persistLocal();refresh()}
+function saveCfg(){S.data.config={...clone(S.cfg),_t:Date.now()};persistLocal()}
+async function dbAdd(col,data){S.data[col].push({...data,id:uid(),_t:Date.now()});changed();return true}
+async function dbSet(col,id,data){const arr=S.data[col];const i=arr.findIndex(r=>r.id===id);const rec={...data,id,_t:Date.now()};if(i<0)arr.push(rec);else arr[i]=rec;changed();return true}
+async function dbDel(col,id){S.data[col]=S.data[col].filter(r=>r.id!==id);S.data.geloescht[id]=Date.now();changed();return true}
+const tageSeit=ts=>ts?Math.floor((Date.now()-ts)/864e5):null;
+function hatDaten(){return S.data.messungen.length+S.data.icp.length+S.data.mischungen.length>0}
+function renderSync(){const t=tageSeit(S.data.letzteSicherung);let c='ok',txt='Auf diesem Gerät gespeichert';
+ if(hatDaten()){if(t==null){c='warn';txt+=' · noch keine Sicherung'}else{txt+=' · Sicherung '+(t===0?'heute':t===1?'gestern':'vor '+t+' Tagen');if(t>30)c='warn'}}
+ setStatus(c,txt);if(S.tab==='speichern'&&TABS.speichern)TABS.speichern.update()}
+
+/* Dateien ausgeben: am Handy über das Teilen-Menü (In Dateien sichern), am Computer als Download */
+async function saveFile(name,blob){const file=new File([blob],name,{type:blob.type});
+ if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});return true}catch(e){if(e.name==='AbortError')return false}}
+ const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);return true}
+function backupText(){return JSON.stringify(serial(S.data),null,1)}
+function markBackup(){S.data.letzteSicherung=Date.now();persistLocal();refresh()}
+async function backupFile(){const ok=await saveFile('riff-logbuch-sicherung-'+todayS()+'.json',new Blob([backupText()],{type:'application/json'}));if(ok){markBackup();toast('Sicherung erstellt')}}
+async function backupCopy(){try{await navigator.clipboard.writeText(backupText());markBackup();toast('Sicherung in die Zwischenablage kopiert')}catch(e){toast('Kopieren nicht möglich – bitte „Sicherungsdatei speichern“ nutzen')}}
+function restoreText(txt,ersetzen){let d;try{d=JSON.parse(txt)}catch(e){toast('Das ist keine gültige Sicherung (JSON)');return}
+ if(!d||d.app!=='riff-logbuch'){toast('Das ist keine Riff-Logbuch-Sicherung');return}d=normalize(d);const n=d.messungen.length+d.icp.length+d.mischungen.length;
+ if(ersetzen){const lb=S.data.letzteSicherung;S.data=d;S.data.letzteSicherung=d.letzteSicherung||lb}else S.data=mergeData(S.data,d);
+ applyConfig();changed();toast(n+' Einträge '+(ersetzen?'wiederhergestellt':'ergänzt'))}
+function csvCell(v){if(v==null||v==='')return '';if(typeof v==='number')return String(v).replace('.',',');const s=String(v);return /[;"\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+function csv(rows){return '﻿'+rows.map(r=>r.map(csvCell).join(';')).join('\r\n')}
+function exportCsv(art){const d=todayS(),T='text/csv;charset=utf-8';let rows,name;
+ if(art==='messungen'){name='riff-messungen-'+d+'.csv';rows=[['Datum','Uhrzeit',...PARAMS.map(p=>p.u?p.n+' ('+p.u+')':p.n),'Methode','Notiz'],...mess().map(m=>[m.datum,m.zeit||'',...PARAMS.map(p=>num(m[p.k])),m.methode||'',m.notiz||''])]}
+ else if(art==='icp'){const li=icps();const syms=EL.map(e=>e.s).filter(s=>li.some(i=>num(i.werte?.[s])!=null));name='riff-icp-'+d+'.csv';rows=[['Datum','Labor','Bemerkung',...syms.map(s=>EMAP[s].n+' '+s+' ('+EMAP[s].u+')')],...li.map(i=>[i.datum,i.labor||'',i.notiz||'',...syms.map(s=>num(i.werte?.[s]))])]}
+ else{const syms=Object.keys(S.cfg.spuren.elemente);name='riff-mischungen-'+d+'.csv';rows=[['Gültig ab','Ansatz je Lösung (ml)','ml pro Tag',...syms.map(s=>s+' (ml, '+(S.cfg.spuren.elemente[s].stamm==='K'?'K+':'A-')+')'),'Bemerkung'],...mixes().map(m=>[m.gueltigAb,num(m.ansatz),num(m.mlProTag),...syms.map(s=>num(m.ml?.[s])),m.bemerkung||''])]}
+ saveFile(name,new Blob([csv(rows)],{type:T}))}
+
+/* ---------- PDF-Bericht ---------- */
+const PDFLIBS=['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'];
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('PDF-Funktion nicht geladen – bitte die App einmal mit Internetverbindung öffnen'));document.head.appendChild(s)})}
+async function pdfLibs(){if(!window.jspdf)await loadScript(PDFLIBS[0]);if(!window.jspdf.jsPDF.API.autoTable)await loadScript(PDFLIBS[1])}
+const PT=s=>String(s??'').replace(/\u03bc/g,'\u00b5').replace(/−/g,'-').replace(/₂/g,'2').replace(/₃/g,'3').replace(/[  ]/g,' ');
+const C={ink:[16,38,46],mut:[86,108,116],acc:[68,72,207],band:[228,229,250],line:[202,214,218],ok:[29,133,86],warn:[168,108,18],crit:[189,58,52],head:[226,233,235],alt:[246,248,249]};
+const stCol=s=>s==='crit'?C.crit:s==='warn'?C.warn:s==='ok'?C.ok:C.ink;
+const stTxt=(v,r)=>{const s=status(v,r);return s==='ok'?'im Bereich':s==='none'?'':v<r.min?'zu niedrig':'zu hoch'};
+async function buildPdf(){
+ await pdfLibs();const o=S.ui.pdf;const tage=num(o.tage)||0;const T0=tage?dn(todayS())-tage:-1e9;const inR=d=>dn(d)>=T0;
+ const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});const W=210,H=297,M=14;let y=M;const V=num(S.cfg.volumen);
+ const need=h=>{if(y+h>H-M-8){doc.addPage();y=M}};
+ const h2=(t,sub)=>{need(16);doc.setFont('helvetica','bold');doc.setFontSize(12.5);doc.setTextColor(...C.ink);doc.text(PT(t),M,y+5);if(sub){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...C.mut);doc.text(PT(sub),W-M,y+5,{align:'right'})}y+=9};
+ const tbl=(head,body,extra={})=>{doc.autoTable({startY:y,head:[head.map(PT)],body:body.map(r=>r.map(c=>c&&typeof c==='object'?{...c,content:PT(c.content)}:PT(c))),margin:{left:M,right:M},theme:'grid',
+  styles:{font:'helvetica',fontSize:8,cellPadding:1.5,textColor:C.ink,lineColor:C.line,lineWidth:0.1,valign:'middle'},headStyles:{fillColor:C.head,textColor:C.mut,fontStyle:'bold',fontSize:7.2},alternateRowStyles:{fillColor:C.alt},...extra});y=doc.lastAutoTable.finalY+8};
+ const vcell=(v,r,d)=>{if(v==null)return '';const s=status(v,r);return {content:d==null?fmtA(v):fmt(v,d),styles:{textColor:stCol(s==='ok'?'none':s),fontStyle:s==='crit'?'bold':'normal'}}};
+ const zr=tage?'letzte '+tage+' Tage':'gesamter Zeitraum';
+ doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(...C.ink);doc.text('Riff-Logbuch',M,y+7);
+ doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(...C.mut);doc.text(PT('Bericht vom '+fd(todayS(),true)+' · '+zr+' · Systemvolumen netto '+(V!=null?fmt(V,0)+' l':'–')),M,y+13);
+ y+=17;doc.setDrawColor(...C.acc);doc.setLineWidth(0.7);doc.line(M,y,W-M,y);y+=7;
+ if(o.stand){h2('Aktueller Stand');const body=PARAMS.map(p=>{const se=series(p.k);const l=se[se.length-1];const r=rng('p:'+p.k);if(!l)return null;const s=status(l.v,r);
+   return [p.n,{content:fmt(l.v,p.d)+(p.u?' '+p.u:''),styles:{fontStyle:'bold'}},fd(l.t,true)+(l.src==='ICP'?' (ICP)':''),fmt(r.min,p.d)+' – '+fmt(r.max,p.d)+' (Ziel '+fmt(r.ziel,p.d)+')',{content:stTxt(l.v,r),styles:{textColor:stCol(s)}}]}).filter(Boolean);
+  if(body.length)tbl(['Parameter','Letzter Wert','Datum','Zielbereich','Status'],body);else{doc.setFontSize(9);doc.setTextColor(...C.mut);doc.text('Noch keine Messungen.',M,y+3);y+=9}}
+ if(o.verlauf){const ps=PARAMS.map(p=>({p,pts:series(p.k).filter(x=>inR(x.t))})).filter(x=>x.pts.length);
+  if(ps.length){h2('Verläufe',zr);const gap=6,cw=(W-2*M-gap)/2,ch=50;ps.forEach((x,i)=>{const col=i%2;if(col===0)need(ch+4);pdfChart(doc,M+col*(cw+gap),y,cw,ch,x.pts,rng('p:'+x.p.k),x.p.n+(x.p.u?' ('+x.p.u+')':''),x.p.d);if(col===1||i===ps.length-1)y+=ch+5});y+=3}}
+ if(o.messungen){const L=mess().filter(m=>inR(m.datum)).reverse();h2('Messungen',L.length+' Einträge · '+zr);
+  if(L.length)tbl(['Datum','Zeit',...PARAMS.map(p=>p.n==='Temperatur'?'Temp.':p.n==='Magnesium'?'Mg':p.n==='Calcium'?'Ca':p.n==='Salinität'?'Sal.':p.n==='Phosphat'?'PO4':p.n==='Nitrat'?'NO3':p.n),'Methode','Notiz'],
+   L.map(m=>[fd(m.datum,true),m.zeit||'',...PARAMS.map(p=>vcell(num(m[p.k]),rng('p:'+p.k),p.d)),m.methode||'',m.notiz||'']),{styles:{font:'helvetica',fontSize:7.2,cellPadding:1.2,textColor:C.ink,lineColor:C.line,lineWidth:0.1},columnStyles:{0:{cellWidth:15},10:{cellWidth:18},11:{cellWidth:'auto'}}});
+  else{doc.setFontSize(9);doc.setTextColor(...C.mut);doc.text('Keine Messungen im Zeitraum.',M,y+3);y+=9}}
+ if(o.icp){const li=icps();if(li.length){const L=li[li.length-1],P=li[li.length-2];h2('ICP-Analyse vom '+fd(L.datum,true),(L.labor?L.labor+' · ':'')+(P?'verglichen mit '+fd(P.datum,true):''));
+   const syms=icpRowsFor().filter(s=>num(L.werte?.[s])!=null);
+   tbl(['Element','Wert','Einheit','Vorher','Änderung','Ziel','Bereich','Status'],syms.map(s=>{const v=num(L.werte[s]),pv=P?num(P.werte?.[s]):null,r=rng('e:'+s);const st=status(v,r);
+    return [EMAP[s].n+' ('+s+')',vcell(v,r),EMAP[s].u,pv==null?'–':fmtA(pv),pv==null?'–':(v-pv>=0?'+':'-')+fmtA(Math.abs(v-pv)),fmtA(r.ziel),fmtA(r.min)+' – '+fmtA(r.max),{content:stTxt(v,r),styles:{textColor:stCol(st)}}]}));
+   if(L.notiz){doc.setFontSize(8);doc.setTextColor(...C.mut);need(6);doc.text(PT('Bemerkung: '+L.notiz),M,y-3);y+=3}}}
+ if(o.spuren){const mx=mixes();if(mx.length){const m=mx[mx.length-1];const syms=Object.keys(S.cfg.spuren.elemente);const tg=num(m.ansatz)/num(m.mlProTag);
+   h2('Aktuelle Spurenelement-Mischung','gültig ab '+fd(m.gueltigAb,true)+(isFinite(tg)?' · reicht bis '+fd(ds(dn(m.gueltigAb)+Math.floor(tg)),true):''));
+   const rows=st=>{const rs=syms.filter(s=>S.cfg.spuren.elemente[s].stamm===st);const sum=rs.reduce((a,s)=>a+(num(m.ml?.[s])||0),0);return [...rs.map(s=>[(st==='K'?'K+':'A-'),(EMAP[s]?.n||s)+' ('+s+')',num(m.ml?.[s])==null?'–':fmt(num(m.ml[s]),2)]),[(st==='K'?'K+':'A-'),'Osmosewasser auffüllen',fmt(num(m.ansatz)-sum,2)]]};
+   tbl(['Lösung','Bestandteil','ml'],[...rows('K'),...rows('A')],{columnStyles:{2:{halign:'right'}},tableWidth:110});
+   doc.setFontSize(8.5);doc.setTextColor(...C.mut);doc.text(PT('Ansatz je Lösung '+fmt(num(m.ansatz),0)+' ml, täglich '+fmt(num(m.mlProTag),1)+' ml je Lösung dosieren.'+(m.bemerkung?' '+m.bemerkung:'')),M,y-3,{maxWidth:W-2*M});y+=6;
+   const hist=mx.filter(x=>inR(x.gueltigAb)||x===m).reverse();
+   if(hist.length>1){h2('Mischungshistorie',zr);tbl(['Gültig ab','Ansatz','ml/Tag',...syms],hist.map(x=>[fd(x.gueltigAb,true),fmt(num(x.ansatz),0),fmt(num(x.mlProTag),1),...syms.map(s=>num(x.ml?.[s])==null?'–':fmt(num(x.ml[s]),2))]),{styles:{font:'helvetica',fontSize:6.8,cellPadding:1,textColor:C.ink,lineColor:C.line,lineWidth:0.1,halign:'right'},columnStyles:{0:{halign:'left'}}})}}}
+ const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(...C.mut);doc.text('Riff-Logbuch · '+PT(fd(todayS(),true)),M,H-8);doc.text('Seite '+i+' von '+n,W-M,H-8,{align:'right'})}
+ return doc.output('blob')}
+function pdfChart(doc,x,y0,w,h,pts,r,title,dec){
+ doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.ink);doc.text(PT(title),x,y0+3.5);
+ const pl=x+11,pt=y0+7,pw=w-13,ph=h-14;
+ const ts=pts.map(p=>dn(p.t));let t0=Math.min(...ts),t1=Math.max(...ts);if(t1-t0<2){t0-=3;t1+=3}
+ const vals=pts.map(p=>p.v);if(r)vals.push(r.min,r.max);let v0=Math.min(...vals),v1=Math.max(...vals);if(v1-v0<1e-9){v0-=1;v1+=1}const pad=(v1-v0)*0.1;v0-=pad;v1+=pad;if(Math.min(...pts.map(p=>p.v))>=0&&v0<0&&(!r||r.min>=0))v0=0;
+ const X=t=>pl+(t-t0)/(t1-t0)*pw,Y=v=>pt+(v1-v)/(v1-v0)*ph;
+ if(r){const yb=Math.max(pt,Y(r.max)),ya=Math.min(pt+ph,Y(r.min));if(ya>yb){doc.setFillColor(...C.band);doc.rect(pl,yb,pw,ya-yb,'F')}}
+ const step=niceStep((v1-v0)/4),tdec=Math.max(0,-Math.floor(Math.log10(step)+1e-9));doc.setFont('helvetica','normal');doc.setFontSize(6.3);doc.setTextColor(...C.mut);doc.setDrawColor(...C.line);doc.setLineWidth(0.15);
+ for(let v=Math.ceil(v0/step)*step;v<=v1+1e-9;v+=step){const yy=Y(v);doc.line(pl,yy,pl+pw,yy);doc.text(fmt(v,tdec),pl-1.2,yy+1,{align:'right'})}
+ if(r){const yz=Y(r.ziel);if(yz>=pt&&yz<=pt+ph){doc.setDrawColor(...C.acc);doc.setLineWidth(0.2);doc.setLineDashPattern([1,1],0);doc.line(pl,yz,pl+pw,yz);doc.setLineDashPattern([],0)}}
+ doc.text(PT(fd(ds(t0))),pl,pt+ph+3.6);doc.text(PT(fd(ds(t1))),pl+pw,pt+ph+3.6,{align:'right'});
+ doc.setDrawColor(...C.acc);doc.setLineWidth(0.45);for(let i=1;i<pts.length;i++)doc.line(X(dn(pts[i-1].t)),Y(pts[i-1].v),X(dn(pts[i].t)),Y(pts[i].v));
+ pts.forEach((p,i)=>{const s=status(p.v,r);const c=s==='crit'?C.crit:s==='warn'?C.warn:C.acc;doc.setFillColor(...c);doc.setDrawColor(...c);doc.circle(X(dn(p.t)),Y(p.v),i===pts.length-1?0.9:0.6,'F')});
+ const l=pts[pts.length-1];doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(...C.ink);doc.text(fmt(l.v,dec??autoDec(l.v)),Math.min(X(dn(l.t)),pl+pw),Math.max(pt+2.5,Y(l.v)-1.8),{align:'right'})}
+
+function setStatus(c,t){const el=$('#status');el.className='status '+c;$('#status-t').textContent=t}
+function setPath(obj,path,val){const ks=path.split('.');let o=obj;for(let i=0;i<ks.length-1;i++){if(o[ks[i]]==null||typeof o[ks[i]]!=='object')o[ks[i]]={};o=o[ks[i]]}o[ks[ks.length-1]]=val}
+function getPath(obj,path){return path.split('.').reduce((o,k)=>o==null?undefined:o[k],obj)}
+
+/* ---------- Diagramme ---------- */
+function drawChart(el,pts,r,dec){
+ if(!el)return;
+ if(!pts.length){el.innerHTML='<p class="empty">Noch keine Werte für diesen Parameter.</p>';return}
+ const W=Math.max(280,Math.round(el.clientWidth||640)),H=W<480?200:240,pl=52,pr=14,pt=12,pb=26;
+ const ts=pts.map(p=>dn(p.t));let t0=Math.min(...ts),t1=Math.max(...ts);if(t1-t0<2){t0-=3;t1+=3}
+ const vals=pts.map(p=>p.v);if(r){vals.push(r.min,r.max)}let v0=Math.min(...vals),v1=Math.max(...vals);if(v1-v0<1e-9){v0-=1;v1+=1}const pad=(v1-v0)*0.1;v0-=pad;v1+=pad;if(Math.min(...pts.map(p=>p.v))>=0&&v0<0&&(!r||r.min>=0))v0=Math.max(v0,0);
+ const X=t=>pl+(t-t0)/(t1-t0)*(W-pl-pr),Y=v=>pt+(v1-v)/(v1-v0)*(H-pt-pb);
+ const step=niceStep((v1-v0)/4),tdec=Math.max(0,-Math.floor(Math.log10(step)+1e-9));
+ let g='';for(let v=Math.ceil(v0/step)*step;v<=v1+1e-9;v+=step){const y=Y(v).toFixed(1);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${(+y+4).toFixed(1)}" text-anchor="end">${fmt(v,tdec)}</text>`}
+ const nx=W<480?3:5;for(let i=0;i<nx;i++){const t=Math.round(t0+(t1-t0)*i/(nx-1));const x=X(t);g+=`<text x="${x.toFixed(1)}" y="${H-6}" text-anchor="${i===0?'start':i===nx-1?'end':'middle'}">${fd(ds(t))}</text>`}
+ let band='';if(r){const yb=Math.max(pt,Y(r.max)),ya=Math.min(H-pb,Y(r.min));if(ya>yb)band=`<rect x="${pl}" y="${yb.toFixed(1)}" width="${W-pl-pr}" height="${(ya-yb).toFixed(1)}" fill="var(--band)"/>`;const yz=Y(r.ziel);if(yz>=pt&&yz<=H-pb)band+=`<line x1="${pl}" x2="${W-pr}" y1="${yz.toFixed(1)}" y2="${yz.toFixed(1)}" stroke="var(--actinic)" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>`}
+ const path=pts.map((p,i)=>(i?'L':'M')+X(dn(p.t)).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ');
+ const dots=pts.map((p,i)=>{const st=status(p.v,r);const c=st==='crit'?'var(--crit)':st==='warn'?'var(--warn)':'var(--actinic)';const last=i===pts.length-1;return `<circle cx="${X(dn(p.t)).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${last?5:3.2}" fill="${last?c:'var(--surface)'}" stroke="${c}" stroke-width="2"><title>${fd(p.t,true)}: ${fmt(p.v,dec??autoDec(p.v))}</title></circle>`}).join('');
+ const lp=pts[pts.length-1],lx=X(dn(lp.t)),ly=Y(lp.v);const lab=`<text x="${Math.min(lx,W-pr-2).toFixed(1)}" y="${(ly-10).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(lp.v,dec??autoDec(lp.v))}</text>`;
+ el.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Verlaufsdiagramm">${band}${g}<path d="${path}" fill="none" stroke="var(--actinic)" stroke-width="2" stroke-linejoin="round"/>${dots}${lab}</svg>`;
+}
+function spark(pts,r){if(pts.length<2)return '';const p=pts.slice(-10);const W=100,H=28;const vs=p.map(x=>x.v);let a=Math.min(...vs),b=Math.max(...vs);if(b-a<1e-9){a-=1;b+=1}const X=i=>2+i/(p.length-1)*(W-4),Y=v=>3+(b-v)/(b-a)*(H-6);return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${p.map((x,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(x.v).toFixed(1)).join(' ')}" fill="none" stroke="var(--actinic)" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`}
+
+/* ---------- Spurenelement-Bilanz (Logik aus Tristans Spurenelement-Rechner) ---------- */
+function mixAt(day){let m=null;for(const x of mixes()){if(dn(x.gueltigAb)<=day)m=x;else break}return m}
+function konzF(sym){const c=num(S.cfg.spuren.elemente[sym]?.konz);if(c==null)return null;return EMAP[sym]?.u==='mg/l'?c/1000:c} // Einheit·l pro ml
+function zufuhrMix(m,sym,V){if(!m)return 0;const ml=num(m.ml?.[sym])||0;const F=konzF(sym);if(F==null||!num(m.ansatz))return 0;return ml/num(m.ansatz)*num(m.mlProTag)*F/V}
+function spurenCalc(){
+ const sp=S.cfg.spuren,V=num(S.cfg.volumen)||0,tage=num(sp.tage)||0,aus=(num(sp.ausgleich)??100)/100,rund=num(sp.rundung)||0.01,mlTag=num(sp.mlProTag)||0;
+ const list=icps();const A=list.find(i=>i.id===S.ui.spA),B=list.find(i=>i.id===S.ui.spB);
+ const out={A,B,V,tage,ansatz:mlTag*tage,rows:[],days:null,mixInfo:[]};
+ if(!A||!B)return out;const a=dn(A.datum),b=dn(B.datum);out.days=b-a;
+ const seen=new Set();for(let d=a;d<b;d++){const m=mixAt(d);const k=m?m.id:'-';if(!seen.has(k)){seen.add(k);out.mixInfo.push(m)}}
+ for(const sym of Object.keys(sp.elemente)){
+  const e=sp.elemente[sym];if(e.aktiv===false)continue;const F=konzF(sym);const soll=rng('e:'+sym).ziel;
+  const H=num(A.werte?.[sym]),I=num(B.werte?.[sym]);const r={sym,stamm:e.stamm,F,soll,H,I,unit:EMAP[sym]?.u||'µg/l',note:'',crit:false};
+  const mA=mixAt(a);r.bisher=mA?num(mA.ml?.[sym]):null;
+  if(H==null){r.note='Kein Wert in der Ausgangsmessung'}else if(I==null){r.note='Kein Wert in der neuen Messung'}else if(!mA){r.note='Keine Mischung für das Ausgangsdatum in der Historie'}else if(F==null){r.note='Konzentration des Konzentrats fehlt'}else if(!(out.days>0)){r.note='Neue Messung muss nach der Ausgangsmessung liegen'}
+  else{
+   let sum=0;for(let d=a;d<b;d++)sum+=zufuhrMix(mixAt(d),sym,V);r.zufuhr=sum/out.days;
+   r.aend=(I-H)/out.days;r.verbrauch=r.zufuhr-r.aend;r.bedarf=r.verbrauch+aus*(soll-I)/tage;
+   r.exakt=Math.max(0,r.bedarf)*V*tage/F;const fk=num(S.ui.faktor[sym]??e.faktor)??1;r.faktor=fk;
+   r.pip=Math.round(r.exakt*fk/rund)*rund;r.prog=I+(r.pip*F/(V*tage)-r.verbrauch)*tage;
+   if(r.verbrauch<0){r.note='Verbrauch negativ: Wert stieg stärker als dosiert – Eintrag oder Messung prüfen';r.crit=true}
+   else if(r.bedarf<0)r.note='Nicht dosieren – Wert sinkt durch Verbrauch Richtung Soll';
+   else if(r.pip>0&&r.pip<0.1)r.note='Sehr kleine Menge: genau pipettieren oder Konzentrat vorverdünnen';
+   if(sym==='Cu'&&r.prog>r.soll*1.25){r.note=(r.note?r.note+' · ':'')+'Kupfer: Ergebnis vor dem Ansetzen prüfen';r.crit=true}
+  }
+  out.rows.push(r);
+ }
+ return out;
+}
+function rundDec(){const r=num(S.cfg.spuren.rundung)||0.01;return Math.max(0,-Math.floor(Math.log10(r)+1e-9))}
+
+/* ---------- Meerwasser-Formeln (EOS-80, PSS-78) ---------- */
+const rhoW=t=>999.842594+6.793952e-2*t-9.095290e-3*t*t+1.001685e-4*t**3-1.120083e-6*t**4+6.536332e-9*t**5;
+const rho=(S_,t)=>rhoW(t)+S_*(0.824493-4.0899e-3*t+7.6438e-5*t*t-8.2467e-7*t**3+5.3875e-9*t**4)+S_**1.5*(-5.72466e-3+1.0227e-4*t-1.6546e-6*t*t)+4.8314e-4*S_*S_;
+function salFromC(C,t){const R=C/42.914,rt=0.6766097+2.00564e-2*t+1.104259e-4*t*t-6.9698e-7*t**3+1.0031e-9*t**4,Rt=R/rt,s=Math.sqrt(Math.max(Rt,0));const a=[0.008,-0.1692,25.3851,14.0941,-7.0261,2.7081],b=[0.0005,-0.0056,-0.0066,-0.0375,0.0636,-0.0144];let A=0,B=0;for(let i=0;i<6;i++){A+=a[i]*s**i;B+=b[i]*s**i}return A+(t-15)/(1+0.0162*(t-15))*B}
+function bisect(f,lo,hi,target){for(let i=0;i<80;i++){const m=(lo+hi)/2;(f(m)<target)?lo=m:hi=m}return (lo+hi)/2}
+const sg=S_=>rho(S_,25)/rhoW(25);
+
+/* ---------- Tabs ---------- */
+const TABS={};
+function showTab(t){if(!TABS[t])t='uebersicht';S.tab=t;try{localStorage.setItem('riff-tab',t)}catch(e){}
+ $$('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'));
+ $('#main').innerHTML=TABS[t].build();bindCfgInputs();TABS[t].update();}
+function refresh(){TABS[S.tab]?.update();updateHeader()}
+function updateHeader(){const v=num(S.cfg.volumen);$('#hdr-sub').textContent='Riffbecken · Systemvolumen netto '+(v!=null?fmt(v,0):'–')+' l'}
+function cfgInput(path,{label,unit,ph,cls='',type='num',opts}){const v=getPath(S.cfg,path);const id='c-'+path.replace(/[.:]/g,'-');
+ if(type==='select')return `<label class="f ${cls}" for="${id}"><span>${label}</span><select id="${id}" data-cfg="${path}">${opts.map(o=>`<option value="${esc(o.id)}"${o.id===v?' selected':''}>${esc(o.n)}</option>`).join('')}</select></label>`;
+ return `<label class="f ${cls}" for="${id}"><span>${label}${unit?` <em>${unit}</em>`:''}</span><input id="${id}" class="num" inputmode="decimal" autocomplete="off" data-cfg="${path}" data-num="1" value="${esc(inVal(v))}" placeholder="${esc(ph??'')}"></label>`}
+function bindCfgInputs(){}
+document.addEventListener('input',e=>{const el=e.target;if(el.dataset.cfg){let v=el.dataset.num?num(el.value):el.value;if(el.dataset.num&&v==null)v='';
+  const p=el.dataset.cfg;if(p.startsWith('ziele.')){const key=p.split('.')[1];if(!S.cfg.ziele[key])S.cfg.ziele[key]={...rng(key)}}
+  setPath(S.cfg,p,v);saveCfg();refresh();return}
+ if(el.dataset.ui){setPath(S.ui,el.dataset.ui,el.value);refresh();return}
+});
+document.addEventListener('change',e=>{const el=e.target;if(el.tagName==='SELECT'&&el.dataset.cfg){setPath(S.cfg,el.dataset.cfg,el.value);saveCfg();refresh()}
+ if(el.dataset.ui&&el.tagName==='SELECT'){setPath(S.ui,el.dataset.ui,el.value);refresh()}
+ if(el.dataset.aktiv){const e2=S.cfg.spuren.elemente[el.dataset.aktiv];if(e2){e2.aktiv=el.checked;saveCfg();refresh()}}
+ if(el.dataset.faktor){S.ui.faktor[el.dataset.faktor]=el.value;const e2=S.cfg.spuren.elemente[el.dataset.faktor];if(e2){e2.faktor=num(el.value)??1;saveCfg()}TABS.spuren.updateCalcOnly()}
+ if(el.dataset.stamm){const e2=S.cfg.spuren.elemente[el.dataset.stamm];if(e2){e2.stamm=el.value;saveCfg();refresh()}}
+});
+document.addEventListener('click',async e=>{
+ const t=e.target.closest('[data-tab]');if(t&&t.classList.contains('tab')){showTab(t.dataset.tab);return}
+ const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,id=a.dataset.id;
+ const H=ACTIONS[act];if(H){e.preventDefault();await H(a,id)}
+});
+window.addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>TABS[S.tab]?.charts?.(),150)});
+
+/* ---------- Übersicht ---------- */
+TABS.uebersicht={
+ build:()=>`<div class="stack"><div id="ov-banner"></div>
+  <section class="panel"><div class="ph"><h2>Fällig</h2><span class="sub">Messintervalle unter „Zielwerte“ einstellbar</span></div><div class="due" id="ov-due"></div></section>
+  <section><div class="cards" id="ov-cards"></div></section>
+  <section class="panel"><div class="ph"><h2 id="ov-ctitle">Verlauf</h2><div class="seg" id="ov-seg"></div></div><div class="chart" id="ov-chart"></div><div class="seg" id="ov-range" style="margin-top:8px"></div><p class="hint">Fläche: Zielbereich · gestrichelt: Zielwert · farbige Punkte: außerhalb des Bereichs.</p></section>
+  <section class="panel" id="ov-icp"></section></div>`,
+ update(){
+  const leer=!S.data.messungen.length&&!S.data.icp.length&&!S.data.mischungen.length;$('#ov-banner').innerHTML=leer?'<p class="banner" style="margin:0">Dein Logbuch ist auf diesem Gerät noch leer. Trag unter <button class="link" data-act="goto" data-id="messungen">Messungen</button> deine erste Messung ein oder spiel unter <button class="link" data-act="goto" data-id="speichern">Sichern &amp; PDF</button> eine Sicherung ein.</p>':'';
+  const T=dn(todayS());const due=[];
+  PARAMS.forEach(p=>{const iv=num(S.cfg.intervalle[p.k]);if(!iv)return;const se=mess().filter(m=>num(m[p.k])!=null);if(!se.length){due.push({c:'',t:p.n+' messen',w:'noch keine Messung',o:999});return}const last=se[se.length-1].datum;const d=dn(last)+iv-T;due.push({c:d<0?'crit':d===0?'warn':'',t:p.n+' messen',w:d<0?'seit '+(-d)+(d===-1?' Tag':' Tagen')+' fällig':d===0?'heute fällig':'in '+d+(d===1?' Tag':' Tagen'),o:d})});
+  const mx=mixes();if(mx.length){const m=mx[mx.length-1];const tg=num(m.ansatz)/num(m.mlProTag);if(isFinite(tg)){const end=dn(m.gueltigAb)+Math.floor(tg);const d=end-T;due.push({c:d<0?'crit':d<=7?'warn':'',t:'Stammlösungen K+ / A−',w:d<0?'seit '+fd(ds(end))+' leer':'reichen bis '+fd(ds(end)),o:d});
+    const li=icps();const lastIcp=li.length?li[li.length-1].datum:null;if(!lastIcp||dn(lastIcp)<dn(m.gueltigAb)+1){due.push({c:d<=7?(d<0?'crit':'warn'):'',t:'ICP-Probe',w:d<0?'jetzt einschicken':'vor dem '+fd(ds(end)),o:d-1})}}}
+  if(hatDaten()){const tb=tageSeit(S.data.letzteSicherung);if(tb==null||tb>=30)due.push({c:tb==null?'warn':'crit',t:'Datensicherung',w:tb==null?'noch keine':'vor '+tb+' Tagen',o:tb==null?0:30-tb})}
+  due.sort((a,b)=>a.o-b.o);
+  $('#ov-due').innerHTML=due.length?due.map(x=>`<div class="due-item ${x.c}"><b>${esc(x.t)}</b><span class="when">${esc(x.w)}</span></div>`).join(''):'<p class="empty">Nichts fällig.</p>';
+  $('#ov-cards').innerHTML=PARAMS.map(p=>{const se=series(p.k),r=rng('p:'+p.k);const l=se[se.length-1],pv=se[se.length-2];const st=l?status(l.v,r):'none';
+   return `<button class="card st-${st}" data-act="ovsel" data-k="${p.k}" aria-pressed="${S.ui.chart===p.k}"><span class="stripe"></span><span class="name">${p.n}</span>
+    ${l?`<span class="val">${fmt(l.v,p.d)}<small>${p.u}</small></span>${statusText(l.v,r)}<span class="meta">${relDays(l.t)}${l.src==='ICP'?' · ICP':''}${pv?' · '+(l.v-pv.v>=0?'+':'−')+fmt(Math.abs(l.v-pv.v),p.d):''}</span>${spark(se,r)}`
+      :`<span class="val" style="color:var(--muted)">–<small>${p.u}</small></span><span class="meta">Noch nicht gemessen</span>`}</button>`}).join('');
+  $('#ov-seg').innerHTML=PARAMS.map(p=>`<button data-act="ovsel" data-k="${p.k}" aria-pressed="${S.ui.chart===p.k}">${p.n}</button>`).join('');
+  const p=PMAP[S.ui.chart];$('#ov-ctitle').textContent='Verlauf '+p.n+' ('+p.u+')';
+  this.charts();
+  const li=icps();const box=$('#ov-icp');
+  if(!li.length){box.innerHTML='<div class="ph"><h2>Letzte ICP-Analyse</h2></div><p class="empty">Noch keine ICP-Analyse eingetragen.</p>';return}
+  const L=li[li.length-1];const items=Object.keys(L.werte||{}).filter(s=>EMAP[s]&&num(L.werte[s])!=null);const bad=items.filter(s=>status(num(L.werte[s]),rng('e:'+s))!=='ok');
+  box.innerHTML=`<div class="ph"><h2>Letzte ICP-Analyse</h2><span class="sub">${fd(L.datum,true)}${L.labor?' · '+esc(L.labor):''} · ${relDays(L.datum)}</span></div>
+   <p style="margin:0 0 10px">${items.length-bad.length} von ${items.length} Elementen im Zielbereich.</p>
+   ${bad.length?`<div class="tw"><table><thead><tr><th>Element</th><th>Wert</th><th>Ziel</th><th>Bereich</th><th class="txt">Status</th></tr></thead><tbody>${bad.map(s=>{const v=num(L.werte[s]),r=rng('e:'+s);return `<tr><td>${EMAP[s].n} (${s})</td><td>${fmtA(v)} <span style="color:var(--muted)">${EMAP[s].u}</span></td><td>${fmtA(r.ziel)}</td><td>${fmtA(r.min)}–${fmtA(r.max)}</td><td class="txt">${statusText(v,r)}</td></tr>`}).join('')}</tbody></table></div>`:''}
+   <p class="hint"><button class="link" data-act="goto" data-id="icp">Alle Werte ansehen</button> · <button class="link" data-act="goto" data-id="spuren">Neue Mischung berechnen</button></p>`;
+ },
+ charts(){const p=PMAP[S.ui.chart];const R=S.ui.range,T0=R?dn(todayS())-R:-1e9;$('#ov-range').innerHTML=[[7,'7 Tage'],[30,'1 Monat'],[90,'3 Monate'],[365,'12 Monate'],[0,'Alles']].map(([v,l])=>`<button data-act="ovrange" data-id="${v}" aria-pressed="${R===v}">${l}</button>`).join('');drawChart($('#ov-chart'),series(p.k).filter(x=>dn(x.t)>=T0),rng('p:'+p.k),p.d)}
+};
+
+/* ---------- Messungen ---------- */
+TABS.messungen={
+ build(){const ed=S.ui.editMess?S.mess.find(m=>m.id===S.ui.editMess):null;
+  return `<div class="stack"><section class="panel"><div class="ph"><h2>${ed?'Messung bearbeiten':'Messung eintragen'}</h2><span class="sub">Leere Felder werden nicht gespeichert</span></div>
+  <form id="m-form" class="form-grid" autocomplete="off">
+   <label class="f" for="m-datum"><span>Datum</span><input type="date" id="m-datum" value="${ed?ed.datum:todayS()}" required></label>
+   <label class="f" for="m-zeit"><span>Uhrzeit <em>(optional)</em></span><input type="time" id="m-zeit" value="${ed?esc(ed.zeit||''):''}"></label>
+   <label class="f" for="m-methode"><span>Testmethode</span><select id="m-methode"><option value="">–</option>${['Salifert','Tropic Marin','Red Sea','Hanna Photometer','Refraktometer','Leitwertsonde','Digitalsonde','Labor','Sonstiges'].map(x=>`<option${ed&&ed.methode===x?' selected':''}>${x}</option>`).join('')}</select></label>
+   ${PARAMS.map(p=>`<label class="f" for="m-${p.k}"><span>${p.n} <em>${p.u}</em></span><input id="m-${p.k}" class="num" inputmode="decimal" placeholder="${fmt(rng('p:'+p.k).ziel,p.d)}" value="${ed?esc(inVal(ed[p.k])):''}"></label>`).join('')}
+   <label class="f wide" for="m-notiz"><span>Notiz</span><input id="m-notiz" value="${ed?esc(ed.notiz||''):''}" placeholder="z. B. Testkit, Fütterung umgestellt, Wasserwechsel"></label>
+   <div class="actions"><button type="submit" class="btn primary">${ed?'Änderungen speichern':'Messung speichern'}</button>${ed?'<button type="button" class="btn" data-act="mcancel">Abbrechen</button>':''}</div>
+  </form></section>
+  <section class="panel"><div class="ph"><h2>Alle Messungen</h2><span class="sub" id="m-count"></span></div><div id="m-table"></div></section></div>`},
+ update(){
+  const f=$('#m-form');if(f&&!f._b){f._b=1;f.addEventListener('submit',async ev=>{ev.preventDefault();const d={datum:$('#m-datum').value||todayS()};let any=false;
+   for(const p of PARAMS){const raw=$('#m-'+p.k).value;const v=num(raw);if(raw.trim()&&v==null){toast(p.n+': bitte eine Zahl eingeben');$('#m-'+p.k).focus();return}if(v!=null){d[p.k]=v;any=true}}
+   const n=$('#m-notiz').value.trim();if(n)d.notiz=n;const zt=$('#m-zeit').value;if(zt)d.zeit=zt;const me=$('#m-methode').value;if(me)d.methode=me;if(!any){toast('Bitte mindestens einen Wert eintragen');return}
+   const ok=S.ui.editMess?await dbSet('messungen',S.ui.editMess,d):await dbAdd('messungen',d);if(ok){toast(S.ui.editMess?'Messung geändert':'Messung gespeichert');S.ui.editMess=null;showTab('messungen')}})}
+  const L=mess().reverse();$('#m-count').textContent=L.length?L.length+' Einträge':'';
+  if(!L.length){$('#m-table').innerHTML='<p class="empty">Noch keine Messungen. Trag oben deine erste Messung ein – sie erscheint dann hier und in der Übersicht.</p>';return}
+  $('#m-table').innerHTML=`<div class="tw"><table><thead><tr><th>Datum</th>${PARAMS.map(p=>`<th>${p.n}<br><span style="text-transform:none;font-weight:400">${p.u}</span></th>`).join('')}<th class="txt">Methode</th><th class="txt">Notiz</th><th></th></tr></thead><tbody>
+  ${L.map(m=>`<tr><td>${fd(m.datum,true)}${m.zeit?' <span style="color:var(--muted)">'+esc(m.zeit)+'</span>':''}</td>${PARAMS.map(p=>{const v=num(m[p.k]);return `<td>${v==null?'<span style="color:var(--muted)">·</span>':fmt(v,p.d)+dot(v,rng('p:'+p.k))}</td>`}).join('')}<td class="txt">${esc(m.methode||'')}</td><td class="txt">${esc(m.notiz||'')}</td>
+   <td>${S.canWrite?(S.ui.confirm===m.id?`<button class="btn small danger" data-act="mdel" data-id="${m.id}">Löschen bestätigen</button> <button class="btn small" data-act="nocf">Nein</button>`:`<button class="btn small" data-act="medit" data-id="${m.id}">Bearbeiten</button> <button class="btn small" data-act="cf" data-id="${m.id}">Löschen</button>`):''}</td></tr>`).join('')}
+  </tbody></table></div>`;
+ }
+};
+
+/* ---------- ICP ---------- */
+function icpRowsFor(werte){const spur=Object.keys(S.cfg.spuren.elemente);const order=[...spur.filter(s=>EMAP[s]),...EL.map(e=>e.s).filter(s=>!spur.includes(s))];return order}
+TABS.icp={
+ build(){const ed=S.ui.editIcp?S.icp.find(i=>i.id===S.ui.editIcp):null;const spur=Object.keys(S.cfg.spuren.elemente).filter(s=>EMAP[s]);const rest=EL.filter(e=>!spur.includes(e.s));
+  const inp=e=>`<label class="f" for="i-${e.s}"><span>${e.n} (${e.s}) <em>${e.u}</em></span><input id="i-${e.s}" class="num" inputmode="decimal" placeholder="${fmtA(rng('e:'+e.s).ziel)}" value="${ed?esc(inVal(ed.werte?.[e.s])):''}"></label>`;
+  const restHas=ed&&rest.some(e=>num(ed.werte?.[e.s])!=null);
+  return `<div class="stack">
+  <section class="panel"><div class="ph"><h2>Letzte Analyse im Vergleich</h2><span class="sub" id="i-meta"></span></div><div id="i-latest"></div></section>
+  <section class="panel"><div class="ph"><h2>Verlauf je Element</h2><select id="i-el" data-ui="icpEl" style="width:auto"></select></div><div class="chart" id="i-chart"></div></section>
+  <section class="panel"><div class="ph"><h2>${ed?'Analyse bearbeiten':'ICP-Ergebnis eintragen'}</h2><span class="sub">Fluor und Hauptelemente in mg/l, sonst µg/l</span></div>
+   <form id="i-form" autocomplete="off"><div class="form-grid">
+    <label class="f" for="i-datum"><span>Probenahme</span><input type="date" id="i-datum" value="${ed?ed.datum:todayS()}" required></label>
+    <label class="f" for="i-labor"><span>Labor</span><input id="i-labor" value="${ed?esc(ed.labor||''):''}" placeholder="z. B. Fauna Marin"></label>
+    <label class="f wide" for="i-notiz"><span>Bemerkung</span><input id="i-notiz" value="${ed?esc(ed.notiz||''):''}" placeholder="Umstellungen, Ozon, Besatz …"></label></div>
+    <h3>Dosierte Spurenelemente</h3><div class="form-grid">${spur.map(s=>inp(EMAP[s])).join('')}</div>
+    <details${restHas?' open':''}><summary>Weitere Elemente</summary>${['S','H','N','X'].map(g=>{const es=rest.filter(e=>e.g===g);return es.length?`<h3>${GROUPS[g]}</h3><div class="form-grid">${es.map(inp).join('')}</div>`:''}).join('')}</details>
+    <div class="actions" style="margin-top:12px"><button class="btn primary" type="submit">${ed?'Änderungen speichern':'Analyse speichern'}</button>${ed?'<button type="button" class="btn" data-act="icancel">Abbrechen</button>':''}</div>
+   </form></section>
+  <section class="panel"><div class="ph"><h2>Alle Analysen</h2></div><div id="i-list"></div></section></div>`},
+ update(){
+  const li=icps();const meta=$('#i-meta'),box=$('#i-latest');
+  if(!li.length){meta.textContent='';box.innerHTML='<p class="empty">Noch keine Analyse eingetragen.</p>'}
+  else{const L=li[li.length-1],P=li[li.length-2];meta.textContent=fd(L.datum,true)+(L.labor?' · '+L.labor:'')+(P?' · verglichen mit '+fd(P.datum,true):'');
+   const syms=icpRowsFor().filter(s=>num(L.werte?.[s])!=null);
+   let rows='',lastG=null;const spur=new Set(Object.keys(S.cfg.spuren.elemente));
+   syms.forEach(s=>{const g=spur.has(s)?'D':EMAP[s].g;if(g!==lastG){rows+=`<tr class="grp"><td colspan="6">${g==='D'?'Dosierte Spurenelemente':GROUPS[g]}</td></tr>`;lastG=g}
+    const v=num(L.werte[s]),pv=P?num(P.werte?.[s]):null,r=rng('e:'+s);
+    rows+=`<tr><td>${EMAP[s].n} (${s})</td><td>${fmtA(v)} <span style="color:var(--muted)">${EMAP[s].u}</span></td><td>${pv==null?'–':fmtA(pv)}</td><td>${pv==null?'–':(v-pv>=0?'+':'−')+fmtA(Math.abs(v-pv))}</td><td>${fmtA(r.ziel)} <span style="color:var(--muted)">(${fmtA(r.min)}–${fmtA(r.max)})</span></td><td class="txt">${statusText(v,r)}</td></tr>`});
+   box.innerHTML=`<div class="tw"><table><thead><tr><th>Element</th><th>Wert</th><th>Vorher</th><th>Änderung</th><th>Ziel (Bereich)</th><th class="txt">Status</th></tr></thead><tbody>${rows}</tbody></table></div>`}
+  const avail=EL.filter(e=>elSeries(e.s).length);const sel=$('#i-el');if(avail.length&&!avail.find(e=>e.s===S.ui.icpEl))S.ui.icpEl=avail[0].s;
+  sel.innerHTML=avail.length?avail.map(e=>`<option value="${e.s}"${e.s===S.ui.icpEl?' selected':''}>${e.n} (${e.s}, ${e.u})</option>`).join(''):'<option>–</option>';
+  this.charts();
+  $('#i-list').innerHTML=li.length?`<div class="tw"><table><thead><tr><th>Datum</th><th class="txt">Labor</th><th>Werte</th><th class="txt">Bemerkung</th><th></th></tr></thead><tbody>${li.slice().reverse().map(i=>`<tr><td>${fd(i.datum,true)}</td><td class="txt">${esc(i.labor||'')}</td><td>${Object.values(i.werte||{}).filter(v=>num(v)!=null).length}</td><td class="txt">${esc(i.notiz||'')}</td><td>${S.canWrite?(S.ui.confirm===i.id?`<button class="btn small danger" data-act="idel" data-id="${i.id}">Löschen bestätigen</button> <button class="btn small" data-act="nocf">Nein</button>`:`<button class="btn small" data-act="iedit" data-id="${i.id}">Bearbeiten</button> <button class="btn small" data-act="cf" data-id="${i.id}">Löschen</button>`):''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">Noch keine Analysen.</p>';
+  const f=$('#i-form');if(f&&!f._b){f._b=1;f.addEventListener('submit',async ev=>{ev.preventDefault();const werte={};
+   for(const e of EL){const el=$('#i-'+e.s);const raw=el.value;const v=num(raw);if(raw.trim()&&v==null){toast(e.n+': bitte eine Zahl eingeben');el.focus();return}if(v!=null)werte[e.s]=v}
+   if(!Object.keys(werte).length){toast('Bitte mindestens einen Wert eintragen');return}
+   const d={datum:$('#i-datum').value||todayS(),werte};const lab=$('#i-labor').value.trim(),n=$('#i-notiz').value.trim();if(lab)d.labor=lab;if(n)d.notiz=n;
+   const ok=S.ui.editIcp?await dbSet('icp',S.ui.editIcp,d):await dbAdd('icp',d);if(ok){toast(S.ui.editIcp?'Analyse geändert':'Analyse gespeichert');S.ui.editIcp=null;S.ui.spA=null;S.ui.spB=null;showTab('icp')}})}
+ },
+ charts(){const s=S.ui.icpEl;if(EMAP[s])drawChart($('#i-chart'),elSeries(s),rng('e:'+s))}
+};
+
+/* ---------- Spurenelemente ---------- */
+TABS.spuren={
+ build(){const sp='spuren.';return `<div class="stack">
+  <section class="panel"><div class="ph"><h2>Neue Mischung berechnen</h2><span class="sub">Bilanz aus Soll-, Ausgangs- und Messwert</span></div>
+   <div class="form-grid">
+    ${cfgInput('volumen',{label:'Beckenvolumen netto',unit:'l'})}
+    ${cfgInput(sp+'mlProTag',{label:'ml pro Tag je Lösung',unit:'ml'})}
+    ${cfgInput(sp+'tage',{label:'Tage bis zur nächsten Messung',unit:'Tage'})}
+    ${cfgInput(sp+'ausgleich',{label:'Ausgleich der Abweichung',unit:'%'})}
+    ${cfgInput(sp+'rundung',{label:'Rundung Pipettiermenge',unit:'ml'})}
+    <label class="f" for="sp-a"><span>Ausgangsmessung</span><select id="sp-a" data-ui="spA"></select></label>
+    <label class="f" for="sp-b"><span>Neue Messung</span><select id="sp-b" data-ui="spB"></select></label>
+   </div>
+   <dl class="kv" id="sp-info" style="margin-top:12px"></dl>
+   <div id="sp-table" style="margin-top:12px"></div>
+   <p class="hint">Verbrauch = bisherige Zufuhr − gemessene Änderung. Bedarf = Verbrauch + Ausgleich × (Soll − Messwert) ÷ Tage. Hat sich die Mischung zwischen den Messungen geändert, rechnet die App Tag für Tag mit der jeweils gültigen Mischung. Faktor: manuelle Korrektur je Element (1 = unverändert).</p>
+  </section>
+  <section class="panel"><div class="ph"><h2>Mischzettel</h2><span class="sub" id="mz-sub"></span></div><div id="mz"></div>
+   <div class="form-grid" style="margin-top:12px">
+    <label class="f" for="mz-datum"><span>Angesetzt am</span><input type="date" id="mz-datum" data-ui="mixDatum" value="${S.ui.mixDatum}"></label>
+    <label class="f wide" for="mz-notiz"><span>Bemerkung</span><input id="mz-notiz" data-ui="mixNotiz" value="${esc(S.ui.mixNotiz)}" placeholder="z. B. Mischung nach ICP vom …"></label>
+    <div class="actions"><button class="btn primary" data-act="mixsave">Als angesetzte Mischung speichern</button><span class="sub" style="color:var(--muted);font-size:.85rem">Weicht deine tatsächliche Mischung ab, kannst du sie danach in der Historie korrigieren.</span></div>
+   </div></section>
+  <section class="panel"><div class="ph"><h2>Mischungshistorie</h2><button class="btn small" data-act="mixnew">Mischung manuell eintragen</button></div><div id="mx-edit"></div><div id="mx-list"></div>
+   <p class="hint">Der Rechner nimmt für jeden Tag die letzte Mischung, deren „gültig ab“ am oder vor diesem Tag liegt. ml = Konzentrat im gesamten Ansatz.</p></section>
+  <section class="panel"><div class="ph"><h2>Konzentrate</h2><span class="sub">Konzentration laut Hersteller in mg/l (= µg/ml)</span></div><div id="kz"></div>
+   <div class="form-grid" style="margin-top:12px"><label class="f" for="kz-add"><span>Element hinzufügen</span><select id="kz-add"></select></label><div class="actions" style="grid-column:auto;align-self:end"><button class="btn" data-act="kzadd">Hinzufügen</button></div></div>
+  </section></div>`},
+ update(){
+  const li=icps();
+  if(li.length>=2){if(!li.find(i=>i.id===S.ui.spB))S.ui.spB=li[li.length-1].id;if(!li.find(i=>i.id===S.ui.spA)){const b=li.findIndex(i=>i.id===S.ui.spB);S.ui.spA=li[Math.max(0,b-1)].id}}
+  else if(li.length===1){S.ui.spA=S.ui.spB=li[0].id}
+  const opt=cur=>li.map(i=>`<option value="${i.id}"${i.id===cur?' selected':''}>${fd(i.datum,true)}${i.labor?' · '+esc(i.labor):''}</option>`).join('')||'<option>–</option>';
+  $('#sp-a').innerHTML=opt(S.ui.spA);$('#sp-b').innerHTML=opt(S.ui.spB);
+  this.updateCalcOnly();
+  if(!S.ui.mixEdit)$('#mx-edit').innerHTML='';
+  const mx=mixes();const syms=Object.keys(S.cfg.spuren.elemente);
+  $('#mx-list').innerHTML=mx.length?`<div class="tw"><table><thead><tr><th>Gültig ab</th><th>Ansatz ml</th><th>ml/Tag</th><th>Reicht</th>${syms.map(s=>`<th>${s}</th>`).join('')}<th>RO K+</th><th>RO A−</th><th class="txt">Bemerkung</th><th></th></tr></thead><tbody>
+   ${mx.slice().reverse().map(m=>{const ro=st=>num(m.ansatz)-syms.filter(s=>S.cfg.spuren.elemente[s].stamm===st).reduce((a,s)=>a+(num(m.ml?.[s])||0),0);const tg=num(m.ansatz)/num(m.mlProTag);
+    return `<tr><td>${fd(m.gueltigAb,true)}</td><td>${fmt(num(m.ansatz),0)}</td><td>${fmt(num(m.mlProTag),1)}</td><td>${isFinite(tg)?fmt(tg,0)+' T.':'–'}</td>${syms.map(s=>`<td>${num(m.ml?.[s])==null?'–':fmt(num(m.ml[s]),2)}</td>`).join('')}<td>${fmt(ro('K'),1)}</td><td>${fmt(ro('A'),1)}</td><td class="txt">${esc(m.bemerkung||'')}</td>
+    <td>${S.canWrite?(S.ui.confirm===m.id?`<button class="btn small danger" data-act="mxdel" data-id="${m.id}">Löschen bestätigen</button> <button class="btn small" data-act="nocf">Nein</button>`:`<button class="btn small" data-act="mxedit" data-id="${m.id}">Bearbeiten</button> <button class="btn small" data-act="cf" data-id="${m.id}">Löschen</button>`):''}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">Noch keine Mischung gespeichert.</p>';
+  const els=S.cfg.spuren.elemente;
+  if(!$('#kz').contains(document.activeElement))$('#kz').innerHTML=`<div class="tw"><table><thead><tr><th>Element</th><th class="txt">Lösung</th><th>Konzentration mg/l</th><th>Soll</th><th class="txt">Berechnen</th></tr></thead><tbody>${syms.map(s=>`<tr><td>${EMAP[s]?.n||s} (${s})</td>
+   <td class="txt"><select data-stamm="${s}" style="width:auto">${['K','A'].map(x=>`<option value="${x}"${els[s].stamm===x?' selected':''}>${x==='K'?'K+ (Kationen)':'A− (Anionen)'}</option>`).join('')}</select></td>
+   <td><input class="num" inputmode="decimal" data-cfg="spuren.elemente.${s}.konz" data-num="1" value="${esc(inVal(els[s].konz))}" style="width:110px"></td>
+   <td>${fmtA(rng('e:'+s).ziel)} ${EMAP[s]?.u||''}</td><td class="txt"><label><input type="checkbox" data-aktiv="${s}"${els[s].aktiv===false?'':' checked'}> ja</label></td></tr>`).join('')}</tbody></table></div>
+   <p class="hint">Sollwerte änderst du unter „Zielwerte“. Osci-Motion-Konzentrationen aus deinem Spurenelement-Rechner (Herstellerseiten, abgerufen 28.09.2026).</p>`;
+  $('#kz-add').innerHTML=EL.filter(e=>!els[e.s]).map(e=>`<option value="${e.s}">${e.n} (${e.s})</option>`).join('');
+ },
+ updateCalcOnly(){
+  const c=spurenCalc();const dec=rundDec();
+  const mi=c.mixInfo.filter(Boolean);
+  $('#sp-info').innerHTML=c.A&&c.B?`<dt>Tage zwischen den Messungen</dt><dd>${c.days}</dd><dt>Dosierte Mischung im Zeitraum</dt><dd>${mi.length?mi.map(m=>'ab '+fd(m.gueltigAb,true)+' ('+fmt(num(m.ansatz),0)+' ml, '+fmt(num(m.mlProTag),1)+' ml/Tag)').join(' · '):'keine'}</dd><dt>Neuer Ansatz je Lösung</dt><dd>${fmt(c.ansatz,0)} ml für ${fmt(c.tage,0)} Tage</dd>`:'';
+  if(!c.A||!c.B||c.A===c.B){$('#sp-table').innerHTML='<p class="empty">Für die Berechnung brauchst du zwei ICP-Analysen: eine Ausgangsmessung und eine neue Messung.</p>';this.mix(c);return}
+  $('#sp-table').innerHTML=`<div class="tw"><table><thead><tr><th>Element</th><th>Lsg.</th><th>Soll</th><th>Ausgang</th><th>Messwert</th><th>Bisher ml</th><th>Zufuhr /Tag</th><th>Änderung /Tag</th><th>Verbrauch /Tag</th><th>Bedarf /Tag</th><th>Neu ml exakt</th><th>Faktor</th><th>Neu ml pipettieren</th><th>Prognose</th><th class="txt">Hinweis</th></tr></thead><tbody>
+  ${c.rows.map(r=>{const has=r.exakt!=null;const rr=rng('e:'+r.sym);return `<tr><td>${EMAP[r.sym]?.n||r.sym} (${r.sym})</td><td>${r.stamm==='K'?'K+':'A−'}</td><td>${fmtA(r.soll)}</td><td>${fmtA(r.H)}</td><td>${fmtA(r.I)}${dot(r.I,rr)}</td><td>${r.bisher==null?'–':fmt(r.bisher,2)}</td>
+   <td>${has?fmtA(r.zufuhr):'–'}</td><td>${has?(r.aend>=0?'+':'−')+fmtA(Math.abs(r.aend)):'–'}</td><td>${has?fmtA(r.verbrauch):'–'}</td><td>${has?fmtA(r.bedarf):'–'}</td><td>${has?fmt(r.exakt,3):'–'}</td>
+   <td><input class="num" inputmode="decimal" data-faktor="${r.sym}" value="${esc(inVal(S.ui.faktor[r.sym]??S.cfg.spuren.elemente[r.sym]?.faktor??1))}" style="width:64px"></td>
+   <td class="hl">${has?fmt(r.pip,dec):'–'}</td><td>${has?fmtA(r.prog)+dot(r.prog,rr):'–'}</td><td class="note${r.crit?' crit':''}">${esc(r.note)}</td></tr>`}).join('')}</tbody></table></div>
+   <p class="hint">Einheiten je Liter Beckenwasser: µg/l bzw. mg/l (Fluor). Prognose = Messwert + (neue Zufuhr − Verbrauch) × Tage.</p>`;
+  this.mix(c);
+ },
+ mix(c){const dec=rundDec();const ok=c.rows.some(r=>r.pip!=null);
+  if(!ok){$('#mz').innerHTML='<p class="empty">Der Mischzettel erscheint, sobald die Berechnung oben Ergebnisse hat.</p>';$('#mz-sub').textContent='';return}
+  const col=st=>{const rs=c.rows.filter(r=>r.stamm===st);const sum=rs.reduce((a,r)=>a+(r.pip||0),0);const ro=c.ansatz-sum;
+   return `<div class="mixcol"><h3><span>${st==='K'?'Lösung K+ (Kationen)':'Lösung A− (Anionen)'}</span><span class="mono" style="font-size:.85rem;color:var(--muted)">ml</span></h3>
+   ${rs.map(r=>`<div class="mixrow"><span>${EMAP[r.sym]?.n||r.sym} (${r.sym})</span><span class="mono">${r.pip==null?'–':fmt(r.pip,dec)}</span></div>`).join('')}
+   <div class="mixrow ro"><span>Osmosewasser auffüllen</span><span class="mono">${fmt(ro,dec)}</span></div><div class="mixrow sum"><span>Gesamt</span><span class="mono">${fmt(c.ansatz,dec)}</span></div>
+   ${ro<0?'<p class="note crit" style="margin:8px 0 0">Konzentrate übersteigen das Ansatzvolumen – ml pro Tag erhöhen.</p>':''}</div>`};
+  $('#mz').innerHTML=`<div class="mix">${col('K')}${col('A')}</div><p class="hint">Täglich je Lösung ${fmt(num(S.cfg.spuren.mlProTag),1)} ml dosieren.</p>`;
+  const d=S.ui.mixDatum||todayS();$('#mz-sub').textContent='reicht bis '+fd(ds(dn(d)+Math.floor(c.tage)),true);
+ }
+};
+
+/* ---------- KH · Ca · Mg ---------- */
+function dosCalc(k){const c=S.cfg.dos[k],V=num(S.cfg.volumen)||0;const prod=PRODUKTE[k].find(p=>p.id===c.produkt)||PRODUKTE[k][0];
+ const eigen=prod.id==='eigen',gpl=num(c.gpl);const unit=eigen||(gpl>0)?'ml':'g';
+ const eff100=eigen?num(c.wirkung):(gpl>0?prod.e*gpl/1000:prod.e);const inc=eff100!=null&&V?eff100*100/V:null;
+ const se=series(k);const T=dn(todayS());const win=num(c.fenster)||30;const pts=se.filter(p=>dn(p.t)>=T-win).map(p=>({x:dn(p.t),y:p.v}));
+ const slope=regression(pts);const dose=num(c.tagesdosis)||0;const supply=inc!=null?dose*inc:null;
+ const cons=slope!=null&&supply!=null?supply-slope:null;const last=se[se.length-1];const r=rng('p:'+k);
+ const kt=num(c.korrektur)||7;let corr=last?(r.ziel-last.v)/kt:null;const mx=MAXTAG[k];if(corr!=null)corr=Math.max(-mx,Math.min(mx,corr));
+ const recInc=cons!=null&&corr!=null?Math.max(0,cons+corr):null;const rec=recInc!=null&&inc?recInc/inc:null;
+ let once=null;if(last&&inc&&r.ziel>last.v){const diff=r.ziel-last.v;const days=Math.max(1,Math.ceil(diff/mx));once={amount:diff/inc,days,per:diff/inc/days}}
+ return{prod,unit,inc,eff100,pts,slope,supply,cons,last,r,rec,recInc,once,kt,win,dose}}
+TABS.dosierung={
+ build(){return `<div class="stack"><p class="hint" style="margin:0">Verbrauch je Tag aus dem Trend deiner Messungen im Auswertungszeitraum plus dem, was du gleichzeitig dosierst. Hast du die Dosis im Zeitraum geändert, ist der Wert ungenau. Magnesium nutzt auch die ICP-Werte.</p>
+  ${['kh','ca','mg'].map(k=>{const p=PMAP[k],b='dos.'+k+'.';return `<section class="panel"><div class="ph"><h2>${p.n}</h2><span class="sub">Ziel ${fmt(rng('p:'+k).ziel,p.d)} ${p.u}</span></div>
+   <div class="form-grid">
+    ${cfgInput(b+'produkt',{label:'Dosiermittel',type:'select',opts:PRODUKTE[k],cls:'wide'})}
+    <div id="d-${k}-gpl-w" style="display:contents">${cfgInput(b+'gpl',{label:'Als Lösung',unit:'g pro Liter',ph:'leer = Pulver'})}</div>
+    <div id="d-${k}-wk-w" style="display:contents">${cfgInput(b+'wirkung',{label:'1 ml erhöht 100 l um',unit:p.u})}</div>
+    ${cfgInput(b+'tagesdosis',{label:'Aktuelle Tagesdosis',unit:'<span id="d-'+k+'-u1">g</span>',ph:'0'})}
+    ${cfgInput(b+'fenster',{label:'Auswertungszeitraum',unit:'Tage'})}
+    ${cfgInput(b+'korrektur',{label:'Abweichung ausgleichen in',unit:'Tagen'})}
+   </div><div class="res" id="d-${k}-res"></div><p class="hint" id="d-${k}-hint"></p></section>`}).join('')}</div>`},
+ update(){['kh','ca','mg'].forEach(k=>{const p=PMAP[k],x=dosCalc(k);const eigen=x.prod.id==='eigen';
+  $('#d-'+k+'-gpl-w').hidden=eigen;$('#d-'+k+'-wk-w').hidden=!eigen;$('#d-'+k+'-u1').textContent=x.unit;
+  const u=x.unit,pd=p.d+1;
+  $('#d-'+k+'-res').innerHTML=`<div><span>Letzter Wert</span><b>${x.last?fmt(x.last.v,p.d):'–'}</b> <small>${p.u}</small></div>
+   <div><span>Trend im Zeitraum</span><b>${x.slope==null?'–':(x.slope>=0?'+':'−')+fmt(Math.abs(x.slope),pd)}</b> <small>${p.u}/Tag</small></div>
+   <div><span>Zufuhr durch Dosis</span><b>${x.supply==null?'–':fmt(x.supply,pd)}</b> <small>${p.u}/Tag</small></div>
+   <div><span>Verbrauch</span><b>${x.cons==null?'–':fmt(x.cons,pd)}</b> <small>${p.u}/Tag</small></div>
+   <div class="big"><span>Empfohlene Tagesdosis</span><b>${x.rec==null?'–':fmt(x.rec,1)}</b> <small>${u}/Tag</small></div>
+   <div><span>1 ${u} erhöht das Becken um</span><b>${x.inc==null?'–':fmt(x.inc,3)}</b> <small>${p.u}</small></div>`;
+  let h=[];if(x.slope==null)h.push(`Für den Trend brauchst du mindestens zwei Messungen im Auswertungszeitraum (${x.win} Tage), die zwei oder mehr Tage auseinander liegen.`);
+  if(x.inc==null)h.push(eigen?'Trag die Wirkung laut Etikett ein.':'Systemvolumen fehlt.');
+  if(x.rec!=null)h.push(`Enthält einen Ausgleich der Abweichung über ${x.kt} Tage, begrenzt auf ${fmt(MAXTAG[k],0)} ${p.u} pro Tag.`);
+  if(x.once)h.push(`Einmalige Anhebung auf den Zielwert: ${fmt(x.once.amount,1)} ${u} zusätzlich, verteilt auf ${x.once.days} ${x.once.days===1?'Tag':'Tage'} (${fmt(x.once.per,1)} ${u} pro Tag).`);
+  $('#d-'+k+'-hint').textContent=h.join(' ')})}
+};
+
+/* ---------- Salz & Volumen ---------- */
+TABS.rechner={
+ build(){const c=S.ui.conv,a=S.ui.adj;return `<div class="grid2">
+  <section class="panel"><div class="ph"><h2>Salinität umrechnen</h2></div><div class="form-grid">
+   <label class="f" for="cv-typ"><span>Gemessen als</span><select id="cv-typ" data-ui="conv.typ"><option value="sal"${c.typ==='sal'?' selected':''}>Salinität (‰ / PSU)</option><option value="sg"${c.typ==='sg'?' selected':''}>Dichte (SG 25/25)</option><option value="lf"${c.typ==='lf'?' selected':''}>Leitwert (mS/cm)</option></select></label>
+   <label class="f" for="cv-w"><span>Wert</span><input id="cv-w" class="num" inputmode="decimal" data-ui="conv.wert" value="${esc(c.wert)}"></label>
+   <label class="f" for="cv-t"><span>Temperatur <em>°C</em></span><input id="cv-t" class="num" inputmode="decimal" data-ui="conv.temp" value="${esc(c.temp)}"></label>
+  </div><div class="res" id="cv-res"></div><p class="hint">Dichte als SG 25/25 (wie bei Refraktometern üblich). Leitwert bei Messtemperatur; temperaturkompensierte Geräte zeigen den Wert bei 25 °C. Formeln: UNESCO EOS-80 und PSS-78.</p></section>
+  <section class="panel"><div class="ph"><h2>Salinität anpassen</h2></div><div class="form-grid">
+   <label class="f" for="ad-i"><span>Ist <em>‰</em></span><input id="ad-i" class="num" inputmode="decimal" data-ui="adj.ist" value="${esc(a.ist)}" placeholder="${(()=>{const s=series('sal');return s.length?fmt(s[s.length-1].v,1):'35,5'})()}"></label>
+   <label class="f" for="ad-s"><span>Soll <em>‰</em></span><input id="ad-s" class="num" inputmode="decimal" data-ui="adj.soll" value="${esc(a.soll)}"></label>
+   ${cfgInput('salz.gpl35',{label:'Salz für 35 ‰',unit:'g/l'})}
+  </div><div class="res" id="ad-res"></div><p class="hint">Rechnet mit dem Systemvolumen netto. Salz für 35 ‰ hängt vom Salz ab – Herstellerangabe eintragen.</p></section>
+  <section class="panel"><div class="ph"><h2>Netto-Volumen</h2></div>
+   <h3 style="margin-top:0">Becken (innen, cm)</h3><div class="form-grid">${cfgInput('vol.bL',{label:'Länge'})}${cfgInput('vol.bT',{label:'Tiefe'})}${cfgInput('vol.bH',{label:'Wasserstand'})}</div>
+   <h3>Technikbecken (cm)</h3><div class="form-grid">${cfgInput('vol.tL',{label:'Länge'})}${cfgInput('vol.tT',{label:'Tiefe'})}${cfgInput('vol.tH',{label:'Wasserstand'})}</div>
+   <div class="form-grid" style="margin-top:10px">${cfgInput('vol.abzug',{label:'Abzug Gestein & Sand',unit:'%'})}</div>
+   <div class="res" id="vo-res"></div><div class="actions" style="margin-top:10px"><button class="btn" data-act="voltake">Als Systemvolumen übernehmen</button></div></section>
+ </div>`},
+ update(){
+  const c=S.ui.conv,t=num(c.temp)??25,w=num(c.wert);let sal=null;
+  if(w!=null){if(c.typ==='sal')sal=w;else if(c.typ==='sg')sal=w>1.03||w<1?null:bisect(sg,0,50,w);else sal=w>0?salFromC(w,t):null}
+  const lf=sal!=null?bisect(x=>salFromC(x,t),0,120,sal):null,lf25=sal!=null?bisect(x=>salFromC(x,25),0,120,sal):null;
+  $('#cv-res').innerHTML=sal==null?'<div><span>Ergebnis</span><b>–</b></div>':`<div class="big"><span>Salinität</span><b>${fmt(sal,2)}</b> <small>‰</small></div><div><span>Dichte SG 25/25</span><b>${fmt(sg(sal),4)}</b></div><div><span>Leitwert bei ${fmt(t,1)} °C</span><b>${fmt(lf,2)}</b> <small>mS/cm</small></div><div><span>Leitwert bei 25 °C</span><b>${fmt(lf25,2)}</b> <small>mS/cm</small></div><div><span>Dichte bei ${fmt(t,1)} °C</span><b>${fmt(rho(sal,t),1)}</b> <small>kg/m³</small></div>`;
+  const a=S.ui.adj,V=num(S.cfg.volumen),ls=series('sal');const ist=num(a.ist)??(ls.length?ls[ls.length-1].v:null),soll=num(a.soll),g35=num(S.cfg.salz.gpl35);
+  let h='<div><span>Ergebnis</span><b>–</b></div>';
+  if(ist!=null&&soll!=null&&V){if(soll<ist){const x=V*(1-soll/ist);h=`<div class="big"><span>Absenken: Beckenwasser ersetzen durch Osmosewasser</span><b>${fmt(x,1)}</b> <small>l</small></div>`}
+   else if(soll>ist&&g35){const g=V*g35*(soll-ist)/35;h=`<div class="big"><span>Anheben: Salz zugeben (vorher auflösen)</span><b>${fmt(g/1000,2)}</b> <small>kg</small></div><div><span>oder in Gramm</span><b>${fmt(g,0)}</b> <small>g</small></div>`}
+   else if(soll===ist)h='<div><span>Ergebnis</span><b>passt</b></div>'}
+  $('#ad-res').innerHTML=h;
+  const v=S.cfg.vol;const vb=[v.bL,v.bT,v.bH].map(num),vt=[v.tL,v.tT,v.tH].map(num);const lb=vb.every(x=>x!=null)?vb[0]*vb[1]*vb[2]/1000:null,lt=vt.every(x=>x!=null)?vt[0]*vt[1]*vt[2]/1000:0;const ab=num(v.abzug)??0;
+  const net=lb!=null?(lb+lt)*(1-ab/100):null;this._net=net;
+  $('#vo-res').innerHTML=`<div><span>Becken brutto</span><b>${lb==null?'–':fmt(lb,0)}</b> <small>l</small></div><div><span>Technik</span><b>${fmt(lt,0)}</b> <small>l</small></div><div class="big"><span>Netto</span><b>${net==null?'–':fmt(net,0)}</b> <small>l</small></div><div><span>Aktuell eingestellt</span><b>${fmt(num(S.cfg.volumen),0)}</b> <small>l</small></div>`;
+ }
+};
+
+/* ---------- Zielwerte & Einstellungen ---------- */
+TABS.ziele={
+ build(){const row=(key,n,u)=>`<tr><td>${n}</td><td class="txt">${u}</td>${['min','ziel','max'].map(f=>`<td><input class="num" inputmode="decimal" data-cfg="ziele.${key}.${f}" data-num="1" value="${esc(inVal(rng(key)[f]))}"></td>`).join('')}</tr>`;
+  return `<div class="stack">
+  <section class="panel"><div class="ph"><h2>System</h2></div><div class="form-grid">${cfgInput('volumen',{label:'Systemvolumen netto',unit:'l'})}</div></section>
+  <section class="panel"><div class="ph"><h2>Messintervalle</h2><span class="sub">0 = keine Erinnerung</span></div><div class="form-grid">${PARAMS.map(p=>cfgInput('intervalle.'+p.k,{label:p.n,unit:'Tage'})).join('')}</div></section>
+  <section class="panel"><div class="ph"><h2>Zielbereiche Wassertests</h2></div><div class="tw"><table><thead><tr><th>Parameter</th><th class="txt">Einheit</th><th>Min</th><th>Ziel</th><th>Max</th></tr></thead><tbody>${PARAMS.map(p=>row('p:'+p.k,p.n,p.u)).join('')}</tbody></table></div></section>
+  <section class="panel"><div class="ph"><h2>Zielbereiche ICP</h2><span class="sub">Ziel = Sollwert im Spurenelement-Rechner</span></div><div class="tw"><table><thead><tr><th>Element</th><th class="txt">Einheit</th><th>Min</th><th>Ziel</th><th>Max</th></tr></thead><tbody>
+   ${['S','H','N','X'].map(g=>`<tr class="grp"><td colspan="5">${GROUPS[g]}</td></tr>`+EL.filter(e=>e.g===g).map(e=>row('e:'+e.s,e.n+' ('+e.s+')',e.u)).join('')).join('')}</tbody></table></div>
+   <p class="hint">Startwerte sind übliche Richtwerte; die Sollwerte der dosierten Spurenelemente stammen aus deinem ReefCalculator. Ampel: im Bereich = grün, bis zu einer halben Bereichsbreite daneben = gelb, darüber = rot.</p>
+   <div class="actions" style="margin-top:10px">${S.ui.confirm==='ziele'?'<button class="btn danger" data-act="zreset">Alle Zielwerte zurücksetzen</button><button class="btn" data-act="nocf">Abbrechen</button>':'<button class="btn" data-act="cf" data-id="ziele">Standardwerte wiederherstellen</button>'}</div></section></div>`},
+ update(){}
+};
+
+/* ---------- Aktionen ---------- */
+const ACTIONS={
+ ovsel:(a)=>{S.ui.chart=a.dataset.k;TABS.uebersicht.update()},
+ goto:(a,id)=>showTab(id),
+ cf:(a,id)=>{S.ui.confirm=id;S.tab==='ziele'?showTab('ziele'):refresh()},
+ nocf:()=>{S.ui.confirm=null;S.tab==='ziele'?showTab('ziele'):refresh()},
+ medit:(a,id)=>{S.ui.editMess=id;showTab('messungen');window.scrollTo({top:0})},
+ mcancel:()=>{S.ui.editMess=null;showTab('messungen')},
+ mdel:async(a,id)=>{if(await dbDel('messungen',id))toast('Messung gelöscht');S.ui.confirm=null},
+ iedit:(a,id)=>{S.ui.editIcp=id;showTab('icp');setTimeout(()=>$('#i-form')?.scrollIntoView({block:'start'}),0)},
+ icancel:()=>{S.ui.editIcp=null;showTab('icp')},
+ idel:async(a,id)=>{if(await dbDel('icp',id))toast('Analyse gelöscht');S.ui.confirm=null},
+ mxdel:async(a,id)=>{if(await dbDel('mischungen',id))toast('Mischung gelöscht');S.ui.confirm=null},
+ mixsave:async()=>{const c=spurenCalc();if(!c.rows.some(r=>r.pip!=null)){toast('Noch keine berechnete Mischung');return}
+  const ml={};c.rows.forEach(r=>{if(r.pip!=null)ml[r.sym]=Math.round(r.pip*10000)/10000});
+  const d={gueltigAb:S.ui.mixDatum||todayS(),ansatz:c.ansatz,mlProTag:num(S.cfg.spuren.mlProTag),ml};const n=(S.ui.mixNotiz||'').trim();d.bemerkung=n||('Mischung nach ICP vom '+fd(c.B.datum,true));
+  if(await dbAdd('mischungen',d)){toast('Mischung gespeichert');S.ui.mixNotiz=''}},
+ mixnew:()=>{S.ui.mixEdit='neu';mixEditForm(null)},
+ mxedit:(a,id)=>{S.ui.mixEdit=id;mixEditForm(S.mix.find(m=>m.id===id))},
+ mxcancel:()=>{S.ui.mixEdit=null;$('#mx-edit').innerHTML=''},
+ mxsave:async()=>{const syms=Object.keys(S.cfg.spuren.elemente);const d={gueltigAb:$('#me-datum').value||todayS(),ansatz:num($('#me-ansatz').value),mlProTag:num($('#me-tag').value),ml:{}};
+  if(!d.ansatz||!d.mlProTag){toast('Ansatzvolumen und ml pro Tag eintragen');return}
+  for(const s of syms){const raw=$('#me-'+s).value;const v=num(raw);if(raw.trim()&&v==null){toast(s+': bitte eine Zahl eingeben');return}if(v!=null)d.ml[s]=v}
+  const b=$('#me-notiz').value.trim();if(b)d.bemerkung=b;
+  const ok=S.ui.mixEdit==='neu'?await dbAdd('mischungen',d):await dbSet('mischungen',S.ui.mixEdit,d);if(ok){toast('Mischung gespeichert');S.ui.mixEdit=null;$('#mx-edit').innerHTML='';refresh()}},
+ kzadd:()=>{const s=$('#kz-add').value;if(!s||S.cfg.spuren.elemente[s])return;S.cfg.spuren.elemente[s]={stamm:ANION.has(s)?'A':'K',konz:''};saveCfg();showTab('spuren')},
+ voltake:()=>{const n=TABS.rechner._net;if(n==null){toast('Erst die Maße eintragen');return}S.cfg.volumen=Math.round(n);saveCfg();toast('Systemvolumen auf '+fmt(Math.round(n),0)+' l gesetzt');refresh()},
+ zreset:()=>{S.cfg.ziele={};S.ui.confirm=null;saveCfg();showTab('ziele');toast('Zielwerte zurückgesetzt')}
+};
+function mixEditForm(m){const syms=Object.keys(S.cfg.spuren.elemente);
+ $('#mx-edit').innerHTML=`<div class="panel" style="background:var(--surface-2);margin-bottom:12px"><h3 style="margin-top:0">${m?'Mischung bearbeiten':'Mischung eintragen'}</h3><div class="form-grid">
+  <label class="f" for="me-datum"><span>Gültig ab</span><input type="date" id="me-datum" value="${m?m.gueltigAb:todayS()}"></label>
+  <label class="f" for="me-ansatz"><span>Ansatz je Lösung <em>ml</em></span><input id="me-ansatz" class="num" inputmode="decimal" value="${m?esc(inVal(m.ansatz)):''}"></label>
+  <label class="f" for="me-tag"><span>ml pro Tag je Lösung</span><input id="me-tag" class="num" inputmode="decimal" value="${m?esc(inVal(m.mlProTag)):inVal(S.cfg.spuren.mlProTag)}"></label>
+  ${syms.map(s=>`<label class="f" for="me-${s}"><span>${EMAP[s]?.n||s} <em>ml (${S.cfg.spuren.elemente[s].stamm==='K'?'K+':'A−'})</em></span><input id="me-${s}" class="num" inputmode="decimal" value="${m?esc(inVal(m.ml?.[s])):''}"></label>`).join('')}
+  <label class="f wide" for="me-notiz"><span>Bemerkung</span><input id="me-notiz" value="${m?esc(m.bemerkung||''):''}"></label>
+  <div class="actions"><button class="btn primary" data-act="mxsave">Speichern</button><button class="btn" data-act="mxcancel">Abbrechen</button></div></div></div>`;
+ $('#mx-edit').scrollIntoView({block:'nearest'})}
+
+/* ---------- Sichern & PDF ---------- */
+TABS.speichern={
+ build(){const o=S.ui.pdf;const cb=(k,l)=>`<label style="display:flex;gap:8px;align-items:center;font-size:.92rem"><input type="checkbox" data-pdf="${k}"${o[k]?' checked':''}> ${l}</label>`;
+  return `<div class="stack">
+  <section class="panel"><div class="ph"><h2>Auf diesem Gerät</h2></div><dl class="kv" id="sv-status"></dl>
+   <p class="hint">Deine Daten liegen nur hier in dieser App auf diesem Gerät, nichts wird hochgeladen. Am iPhone die App über Teilen › „Zum Home-Bildschirm“ ablegen und von dort öffnen: Safari löscht Daten normaler Webseiten nach sieben Tagen ohne Besuch, bei Home-Bildschirm-Apps nicht. Sichere trotzdem regelmäßig, zum Beispiel nach jeder ICP-Analyse.</p></section>
+  <section class="panel"><div class="ph"><h2>PDF-Bericht</h2></div>
+   <div class="form-grid"><label class="f" for="pdf-tage"><span>Zeitraum</span><select id="pdf-tage" data-ui="pdf.tage">${[['30','letzte 30 Tage'],['90','letzte 3 Monate'],['180','letzte 6 Monate'],['365','letztes Jahr'],['0','alles']].map(([v,l])=>`<option value="${v}"${o.tage===v?' selected':''}>${l}</option>`).join('')}</select></label></div>
+   <div style="display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0">${cb('stand','Aktueller Stand')}${cb('verlauf','Verläufe')}${cb('messungen','Messungen')}${cb('icp','Letzte ICP-Analyse')}${cb('spuren','Spurenelement-Mischung')}</div>
+   <div class="actions"><button class="btn primary" data-act="pdf" id="pdf-btn">PDF erstellen</button></div>
+   <p class="hint">Am Handy öffnet sich danach das Teilen-Menü: „In Dateien sichern“, per Mail senden oder drucken. Am Computer landet das PDF im Download-Ordner.</p></section>
+  <section class="panel"><div class="ph"><h2>Sicherung</h2><span class="sub" id="sv-last"></span></div>
+   <div class="actions"><button class="btn primary" data-act="bkfile">Sicherungsdatei speichern</button><button class="btn" data-act="bkcopy">In Zwischenablage kopieren</button></div>
+   <h3>Wiederherstellen</h3>
+   <label style="display:flex;gap:8px;align-items:center;font-size:.92rem;margin-bottom:10px"><input type="checkbox" id="rs-ersetzen"> Vorhandene Daten ersetzen <span style="color:var(--muted)">(sonst werden sie ergänzt)</span></label>
+   <div class="form-grid"><label class="f wide" for="rs-file"><span>Aus Sicherungsdatei</span><input type="file" id="rs-file" accept=".json,application/json"></label>
+    <label class="f wide" for="rs-text"><span>Oder Sicherung als Text einfügen</span><textarea id="rs-text" rows="3" style="font:inherit;font-family:var(--font-mono);font-size:.8rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%;resize:vertical"></textarea></label>
+    <div class="actions"><button class="btn" data-act="rstext">Aus Text wiederherstellen</button></div></div>
+   ${S.ui.confirm==='ersetzen'?'<p class="banner" style="margin-top:12px">Ersetzen löscht alle Daten auf diesem Gerät, die nicht in der Sicherung stehen. <button class="btn small danger" data-act="rsgo">Ja, ersetzen</button> <button class="btn small" data-act="nocf">Abbrechen</button></p>':''}</section>
+  <section class="panel"><div class="ph"><h2>Tabellen für Excel</h2></div>
+   <div class="actions"><button class="btn" data-act="excsv" data-id="messungen">Messungen (CSV)</button><button class="btn" data-act="excsv" data-id="icp">ICP-Analysen (CSV)</button><button class="btn" data-act="excsv" data-id="mischungen">Mischungen (CSV)</button></div>
+   <p class="hint">Excel öffnet die Dateien direkt mit Semikolon und Dezimalkomma.</p></section>
+  <section class="panel"><div class="ph"><h2>Alle Daten löschen</h2></div>
+   ${S.ui.confirm==='alles'?'<div class="actions"><button class="btn danger" data-act="wipe">Endgültig löschen</button><button class="btn" data-act="nocf">Abbrechen</button></div>':'<div class="actions"><button class="btn danger" data-act="cfwipe">Alle Daten auf diesem Gerät löschen</button></div>'}
+   <p class="hint">Vorher eine Sicherung speichern. Gelöschte Daten lassen sich nur aus einer Sicherung zurückholen.</p></section></div>`},
+ update(){const n=S.data.messungen.length,i=S.data.icp.length,m=S.data.mischungen.length,t=tageSeit(S.data.letzteSicherung);
+  $('#sv-status').innerHTML=`<dt>Gespeichert</dt><dd>${n} Messungen · ${i} ICP · ${m} Mischungen</dd><dt>Dauerhafter Speicher</dt><dd>${S.persist===true?'vom Browser bestätigt':S.persist===false?'nicht bestätigt':'–'}</dd><dt>Letzte Sicherung</dt><dd>${S.data.letzteSicherung?new Date(S.data.letzteSicherung).toLocaleDateString('de-DE')+(t>30?' · fällig':''):'noch keine'}</dd>`;
+  $('#sv-last').textContent=S.data.letzteSicherung?(t===0?'zuletzt heute':'zuletzt vor '+t+(t===1?' Tag':' Tagen')):'noch keine Sicherung'}
+};
+Object.assign(ACTIONS,{
+ pdf:async(a)=>{a.disabled=true;a.textContent='PDF wird erstellt …';try{const blob=await buildPdf();await saveFile('riff-logbuch-bericht-'+todayS()+'.pdf',blob)}catch(e){toast(e.message||'PDF konnte nicht erstellt werden')}finally{a.disabled=false;a.textContent='PDF erstellen'}},
+ bkfile:()=>backupFile(),bkcopy:()=>backupCopy(),excsv:(a,id)=>exportCsv(id),
+ rstext:()=>{const t=$('#rs-text').value.trim();if(!t){toast('Bitte zuerst die Sicherung einfügen');return}if($('#rs-ersetzen').checked){S.ui.pending=t;S.ui.confirm='ersetzen';showTab('speichern');return}restoreText(t,false);$('#rs-text').value=''},
+ rsgo:()=>{const t=S.ui.pending;S.ui.pending=null;S.ui.confirm=null;if(t)restoreText(t,true);showTab('speichern')},
+ cfwipe:()=>{S.ui.confirm='alles';showTab('speichern')},
+ wipe:()=>{S.data=emptyData();S.ui.confirm=null;applyConfig();changed();showTab('speichern');toast('Alle Daten auf diesem Gerät gelöscht')},
+ ovrange:(a,id)=>{S.ui.range=+id;TABS.uebersicht.update()}
+});
+document.addEventListener('change',async e=>{const el=e.target;if(el.dataset.pdf){S.ui.pdf[el.dataset.pdf]=el.checked;return}
+ if(el.id==='rs-file'&&el.files?.[0]){const t=await el.files[0].text();el.value='';if($('#rs-ersetzen').checked){S.ui.pending=t;S.ui.confirm='ersetzen';showTab('speichern')}else restoreText(t,false)}});
+
+/* ---------- Start ---------- */
+async function init(){
+ S.data=await loadData();applyConfig();updateHeader();showTab(S.tab);renderSync();
+ try{if(navigator.storage?.persisted){S.persist=await navigator.storage.persisted();renderSync()}}catch(e){}
+ if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+init();
+
+</script>
+</body>
+</html>
